@@ -1,0 +1,210 @@
+﻿unit dlGUIProgressBar;
+
+interface
+
+uses SysUtils, Graphics, dlGUITypes, dlGUIObject, dlGUIPaletteHelper;
+
+{
+  ====================================================
+  = Delphi OpenGL GUIv2                              =
+  =                                                  =
+  = Author: Ansperi L.L., 2021                       =
+  = Email : gui_proj@mail.ru                         =
+  = Site  : lemgl.ru                                 =
+  =                                                  =
+  = Собрано на Delphi 10.3 community                 =
+  ====================================================
+}
+
+type
+  TGUIProgressBar = class(TGUIObject)
+    private
+     type
+       TGUIShowTextProp = (
+                          stNone, //Никогда не отображать
+                          stShow, //Отображать значение
+                          stOnlyMouse //Отображать только когда наведена мышь
+                        );
+
+    private
+      FMax         : TInt;
+      FValue       : TInt;
+      FStrValue    : String;
+
+      FBorderWidth : TInt;
+      FShowText    : TGUIShowTextProp;
+    private
+      procedure RecalcTextPos;
+
+      procedure SetValue(pValue: TInt);
+      procedure SetBorderWidth(pValue: TInt);
+
+      function GetRectWidthValue: TInt;
+      function GetColor: TColor;
+
+      procedure SetBorderColor(pColor: TColor);
+      function GetBorderColor: TColor;
+    protected
+      procedure SetColor(pColor: TColor); override;
+      procedure SetFontEvent; override;
+      procedure SetResize; override; //Применить к вершинам масштабирование Width, Height
+      procedure SetAreaResize; override;
+    public
+      constructor Create(pName: String; pX, pY: TInt; pTextureLink: TTextureLink = nil);
+      procedure SetColorGradient(pAColor, pBColor, pCColor, pDColor: TColor);
+
+      procedure RenderText; override;
+    published
+      property ObjectType;
+      property Name;
+      property X;
+      property Y;
+      property Width;
+      property Height;
+      property Font;
+      property Hide;
+      property TextureName;
+      //классы
+      property Parent;
+      property PopupMenuName;
+      property Hint;
+      property Blend;
+
+      property ShowText   : TGUIShowTextProp read FShowText      write FShowText       default stNone;
+      property BorderColor: TColor           read GetBorderColor write SetBorderColor;
+      property BorderWidth: TInt             read FBorderWidth   write SetBorderWidth;
+      property Max        : TInt             read FMax           write FMax;
+      property Value      : TInt             read FValue         write SetValue;
+      property Color      : TColor           read GetColor       write SetColor;
+  end;
+
+implementation
+
+const GROUP_BORDER = 0;
+      GROUP_VALUE  = 1;
+
+{ TGUIProgressBar }
+
+constructor TGUIProgressBar.Create(pName: String; pX, pY: TInt; pTextureLink: TTextureLink);
+begin
+  inherited Create(pName, gtcProgressBar);
+  SetRect(pX, pY, 200, 25);
+
+  FBorderWidth:= 1;
+  FMax        := 100;
+  FValue      := 0;
+  Area.Show   := True;
+
+  SetTextureLink(pTextureLink);
+  RecalcTextPos;
+
+  VertexList.MakeSquare(0, 0, Width, Height, Color, GUIPalette.GetCellRect(0), GROUP_BORDER);
+  VertexList.MakeSquare(FBorderWidth, FBorderWidth, GetRectWidthValue, Height - (FBorderWidth * 2), Color, GUIPalette.GetCellRect(0), GROUP_VALUE);
+
+  VertexList.SetGroupColor(GROUP_BORDER, clBlack);
+  VertexList.SetGroupColor(GROUP_VALUE, clGray);
+end;
+
+function TGUIProgressBar.GetBorderColor: TColor;
+begin
+  Result:= VertexList.GetGroupColor(GROUP_BORDER, 1);
+end;
+
+function TGUIProgressBar.GetColor: TColor;
+begin
+  Result:= FColor.GetColor;
+end;
+
+function TGUIProgressBar.GetRectWidthValue: TInt;
+begin
+  Result:= 0;
+
+  if FValue = 0 then
+    Exit;
+
+  Result:= Trunc( ((Rect.Width - (FBorderWidth * 2)) / FMax) * FValue );
+end;
+
+procedure TGUIProgressBar.SetFontEvent;
+begin
+  inherited;
+  RecalcTextPos;
+end;
+
+procedure TGUIProgressBar.RecalcTextPos;
+begin
+  FStrValue:= FValue.ToString + '%';
+
+  if Rect.Width <> 0 then
+    FTextOffset.X:= Trunc(((Rect.Width - FBorderWidth * 3) / 2) - (FFont.GetTextWidth(FStrValue) / 2)) else
+    FTextOffset.X:= 0;
+
+  if Rect.Height <> 0 then
+    FTextOffset.Y:= Trunc(((Rect.Height - (FBorderWidth * 3)) / 2) - (FFont.Height / 2)) else
+    FTextOffset.Y:= 0;
+end;
+
+procedure TGUIProgressBar.RenderText;
+begin
+  if FShowText = stNone then
+    Exit;
+
+  if (FShowText = stOnlyMouse) and (not Area.Visible) then
+    Exit;
+
+  inherited;
+  FFont.RenderText(Rect.X + FTextOffset.X, Rect.Y + FTextOffset.Y, FStrValue, Rect.Width);
+end;
+
+procedure TGUIProgressBar.SetAreaResize;
+begin
+  Area.Rect.SetRect(1, 0, Width - 1, Height -1);
+end;
+
+procedure TGUIProgressBar.SetBorderColor(pColor: TColor);
+begin
+  VertexList.SetGroupColor(GROUP_BORDER, pColor);
+end;
+
+procedure TGUIProgressBar.SetBorderWidth(pValue: TInt);
+begin
+  FBorderWidth:= pValue;
+
+  if FBorderWidth < 1 then
+    FBorderWidth:= 1;
+
+end;
+
+procedure TGUIProgressBar.SetColor(pColor: TColor);
+begin
+  FColor.SetColor(pColor);
+  VertexList.SetGroupColor(GROUP_VALUE, pColor);
+end;
+
+procedure TGUIProgressBar.SetColorGradient(pAColor, pBColor, pCColor, pDColor: TColor);
+begin
+  VertexList.SetGroupColorSquare(GROUP_VALUE, [pAColor, pBColor, pCColor, pDColor]);
+end;
+
+procedure TGUIProgressBar.SetResize;
+begin
+  VertexList.SetVertexPosSquare(0, 0, 0, Rect.Width, Rect.Height);
+  VertexList.SetVertexPosSquare(4, FBorderWidth, FBorderWidth, GetRectWidthValue, Rect.Height - (FBorderWidth * 2));
+  RecalcTextPos;
+end;
+
+procedure TGUIProgressBar.SetValue(pValue: TInt);
+begin
+  FValue:= pValue;
+
+  if FValue > FMax then
+    FValue:= FMax;
+
+  if FValue < 0 then
+    FValue:= 0;
+
+  RecalcTextPos;
+  VertexList.SetVertexPosSquare(4, FBorderWidth, FBorderWidth, GetRectWidthValue, Rect.Height - (FBorderWidth * 2));
+end;
+
+end.
