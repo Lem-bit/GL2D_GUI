@@ -39,7 +39,7 @@ interface
 
        //Создать окно
        procedure AddForm(pForm: TGUIForm);
-       procedure CreateForm(pName, pCaption: String; pX, pY, pWidth, pHeight: TInt; pTextureLink: TTextureLink = nil; pTextureFont: TTextureLink = nil);
+       procedure CreateForm(pName, pCaption: String; pX, pY, pWidth, pHeight: Integer; pTextureLink: TTextureLink = nil; pTextureFont: TTextureLink = nil);
 
        //Прорисовать все окна
        procedure Render;
@@ -98,7 +98,7 @@ begin
   FCurrentForm:= nil;
 end;
 
-procedure TGUIFormList.CreateForm(pName, pCaption: String; pX, pY, pWidth, pHeight: TInt; pTextureLink: TTextureLink = nil; pTextureFont: TTextureLink = nil);
+procedure TGUIFormList.CreateForm(pName, pCaption: String; pX, pY, pWidth, pHeight: Integer; pTextureLink: TTextureLink = nil; pTextureFont: TTextureLink = nil);
 begin
   AddForm(TGUIForm.Create(pName, pCaption, pX, pY, pWidth, pHeight, pTextureLink, pTextureFont));
 end;

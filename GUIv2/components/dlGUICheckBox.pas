@@ -25,7 +25,7 @@ interface
        procedure SetAreaResize; override;
        procedure SetFontEvent; override; //Событие при создании шрифта
      public
-       constructor Create(pName, pText: String; pX, pY: TInt; pTextureLink: TTextureLink = nil);
+       constructor Create(pName, pText: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
        procedure RenderText; override;
        procedure OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton); override;
      published
@@ -56,7 +56,7 @@ implementation
 
 { TGUICheckBox }
 
-constructor TGUICheckBox.Create(pName, pText: String; pX, pY: TInt; pTextureLink: TTextureLink = nil);
+constructor TGUICheckBox.Create(pName, pText: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
 begin
   inherited Create(pName, gtcCheckBox);
   SetRect(pX, pY, 140, CHECKBOX_SIZE);
@@ -68,8 +68,10 @@ begin
   SetTextureLink(pTextureLink);
 
   //Основная часть
-  VertexList.MakeSquare(0, 0, CHECKBOX_SIZE, CHECKBOX_SIZE, Color, GUIPalette.GetCellRect(8), GROUP_UNCHECKED);
-  VertexList.MakeSquare(0, 0, CHECKBOX_SIZE, CHECKBOX_SIZE, Color, GUIPalette.GetCellRect(9), GROUP_CHECKED, True);
+  VertexList.MakeSquare(0, 0, CHECKBOX_SIZE, CHECKBOX_SIZE, Color,
+    GUIPalette.GetCellRect(pal_CheckBox_uc), GROUP_UNCHECKED);
+  VertexList.MakeSquare(0, 0, CHECKBOX_SIZE, CHECKBOX_SIZE, Color,
+    GUIPalette.GetCellRect(pal_CheckBox_ch), GROUP_CHECKED, True);
 end;
 
 procedure TGUICheckBox.SetAreaResize;

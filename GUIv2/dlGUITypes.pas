@@ -28,13 +28,11 @@ type
 
 //Переназначение стандартных типов
 type
-  TInt   = integer;
   TFloat = single;
   TUInt  = Cardinal;
 
-
   TMousePoint = record
-    X, Y: TInt;
+    X, Y: integer;
   end;
 //===========================================
 //Двумерные координаты
@@ -116,8 +114,8 @@ type
 //Ссылка на текстуру
   TTextureLink = class(TPersistent)
     private
-      FWidth       : TInt;     //Ширина текстуры
-      FHeight      : TInt;     //Высота текстуры
+      FWidth       : Integer;  //Ширина текстуры
+      FHeight      : Integer;  //Высота текстуры
       FLink        : TUInt;    //Ссылка на текстуру
 
       FName        : String;   //Название текстуры
@@ -141,8 +139,8 @@ type
     public
       property Enable      : Boolean read FEnable       write FEnable;
 
-      property Width       : TInt    read FWidth        write FWidth;
-      property Height      : TInt    read FHeight       write FHeight;
+      property Width       : Integer read FWidth        write FWidth;
+      property Height      : Integer read FHeight       write FHeight;
       property Link        : TUInt   read FLink         write FLink;
 
       property FileName    : String  read FFileName     write FFileName;
@@ -286,15 +284,15 @@ type
 //Область объекта
    TGUIObjectRect = record
      public
-       X     : TInt; //Позиция по X
-       Y     : TInt; //Позиция по Y
-       Width : TInt; //Ширина
-       Height: TInt; //Высота
+       X     : Integer; //Позиция по X
+       Y     : Integer; //Позиция по Y
+       Width : Integer; //Ширина
+       Height: Integer; //Высота
      public
-       procedure SetPos(pX, pY: TInt);
+       procedure SetPos(pX, pY: Integer);
        procedure SetRect(pRect: TGUIObjectRect); overload;
-       procedure SetRect(pX, pY, pW, pH: TInt); overload;
-       procedure SetSize(pWidth, pHeight: TInt);
+       procedure SetRect(pX, pY, pW, pH: Integer); overload;
+       procedure SetSize(pWidth, pHeight: Integer);
      public
        //Нарисовать квадрат по размерам
        procedure Render(pOffset: Integer = 0; pMode: TUInt = GL_LINE_LOOP);
@@ -305,7 +303,7 @@ type
   TGUICursor = class
     private
       FRect           : TGUIObjectRect; //Позиция курсора и размер
-      FCursorCharPos  : TInt;     //Позиция текущего символа
+      FCursorCharPos  : Integer;     //Позиция текущего символа
       FCursorRenderPos: TFloat;   //Позиция прорисовки курсора
       FCursorTime     : Cardinal; //Время курсора
       FCursorShow     : Boolean;  //Показывать курсор или нет
@@ -313,7 +311,7 @@ type
       FWaitTime       : Cardinal; //Время ожидания перед морганием
     public
       property Rect     : TGUIObjectRect read FRect;
-      property CharPos  : TInt           read FCursorCharPos   write FCursorCharPos;
+      property CharPos  : Integer        read FCursorCharPos   write FCursorCharPos;
       property RenderPos: TFloat         read FCursorRenderPos write FCursorRenderPos;
     public
       constructor Create(pColor: TColor);
@@ -337,7 +335,7 @@ type
     //Позиция X, Y
     FRect      : TGUIObjectRect;
     //
-    FOffset    : TInt;
+    FOffset    : Integer;
     //Режим прорисовки
     FDrawMode  : TUInt;
     //Смешивание цветов
@@ -352,6 +350,8 @@ type
     constructor Create;
     destructor Destroy; override;
     procedure Render;
+
+    procedure SetDefaultColor;
   public
     property Rect      : TGUIObjectRect read FRect       write FRect;
     property Show      : Boolean        read FShow       write FShow;
@@ -360,7 +360,7 @@ type
     property PointSize : TFloat         read FPointSize  write FPointSize;
     property LineWidth : TFloat         read FLineWidth  write FLineWidth;
     property Speed     : TFloat         read FSpeed      write FSpeed;
-    property Offset    : TInt           read FOffset     write FOffset;
+    property Offset    : Integer        read FOffset     write FOffset;
     property DrawMode  : TUInt          read FDrawMode   write FDrawMode;
     property Blend     : TBlendParam    read FBlend      write FBlend;
     property AnimEnable: Boolean        read FAnimEnable write FAnimEnable;
@@ -539,13 +539,15 @@ end;
 
 constructor TGUITypeArea.Create;
 begin
-  FColor    := TGLColor.Create(0.5, 0.5, 0.5, 0.0);
+  FColor    := TGLColor.Create;
   FDrawMode := GL_LINE_LOOP;
   FPointSize:= 1.0;
   FLineWidth:= 1;
   FSpeed    := 0.01;
   FBlend    := TBlendParam.Create;
   FRect.SetRect(0, 0, 0, 0);
+
+  SetDefaultColor;
 end;
 
 destructor TGUITypeArea.Destroy;
@@ -583,6 +585,11 @@ begin
   glPointSize(1);
   glLineWidth(1);
 
+end;
+
+procedure TGUITypeArea.SetDefaultColor;
+begin
+  FColor.SetColor(0.5, 0.5, 0.5, 0.0);
 end;
 
 procedure TGUITypeArea.SetVisible(Value: Boolean);
@@ -843,7 +850,7 @@ begin
   glEnd;
 end;
 
-procedure TGUIObjectRect.SetPos(pX, pY: TInt);
+procedure TGUIObjectRect.SetPos(pX, pY: Integer);
 begin
   X:= pX;
   Y:= pY;
@@ -855,13 +862,13 @@ begin
   SetSize(pRect.Width, pRect.Height);
 end;
 
-procedure TGUIObjectRect.SetRect(pX, pY, pW, pH: TInt);
+procedure TGUIObjectRect.SetRect(pX, pY, pW, pH: Integer);
 begin
   SetPos(pX, pY);
   SetSize(pW, pH);
 end;
 
-procedure TGUIObjectRect.SetSize(pWidth, pHeight: TInt);
+procedure TGUIObjectRect.SetSize(pWidth, pHeight: Integer);
 begin
   Width := pWidth;
   Height:= pHeight;

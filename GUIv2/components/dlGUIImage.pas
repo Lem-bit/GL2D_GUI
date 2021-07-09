@@ -21,7 +21,7 @@ uses Graphics, dlGUITypes, dlGUIObject;
      protected
        procedure SetResize; override; //Применить к вершинам масштабирование Width, Height
      public
-       constructor Create(pName: String; pX, pY, pW, pH: TInt; pTextureLink: TTextureLink = nil);
+       constructor Create(pName: String; pX, pY, pW, pH: Integer; pTextureLink: TTextureLink = nil);
        procedure SetImageLink(const ATextureLink: TTextureLink);
      published
        property ObjectType;
@@ -42,7 +42,7 @@ implementation
 
 { TGUIImage }
 
-constructor TGUIImage.Create(pName: String; pX, pY, pW, pH: TInt; pTextureLink: TTextureLink = nil);
+constructor TGUIImage.Create(pName: String; pX, pY, pW, pH: Integer; pTextureLink: TTextureLink = nil);
 begin
   inherited Create(pName, gtcImage);
   SetRect(pX, pY, pW, pH);

@@ -8,23 +8,23 @@ type
   TGUIPanel = class(TGUIObject)
     private
       //Рамка
-      FBorder: TInt;
+      FBorder: Integer;
     private
-      procedure SetBorder(value: TInt);
+      procedure SetBorder(value: Integer);
       procedure ResizeBorder;
     protected
       procedure SetResize; override;
     public
-      constructor Create(pName: String; pX, pY: TInt; pTextureLink: TTextureLink = nil);
+      constructor Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
     public
-      property Border: TInt read FBorder write SetBorder;
+      property Border: Integer read FBorder write SetBorder;
   end;
 
 implementation
 
 { TGUIPanel }
 
-constructor TGUIPanel.Create(pName: String; pX, pY: TInt; pTextureLink: TTextureLink);
+constructor TGUIPanel.Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink);
 begin
   inherited Create(pName, gtcObject);
 
@@ -34,8 +34,8 @@ begin
 
   FBorder:= 1;
 
-  VertexList.MakeSquare(0, 0, Width, Height, Color, GUIPalette.GetCellRect(6));
-  VertexList.MakeSquare(FBorder, FBorder, Width - (FBorder * 2), Height - (FBorder * 2), Color, GUIPalette.GetCellRect(4));
+  VertexList.MakeSquare(0, 0, Width, Height, Color, GUIPalette.GetCellRect(pal_6));
+  VertexList.MakeSquare(FBorder, FBorder, Width - (FBorder * 2), Height - (FBorder * 2), Color, GUIPalette.GetCellRect(pal_Window));
 end;
 
 procedure TGUIPanel.ResizeBorder;
@@ -43,7 +43,7 @@ begin
   VertexList.SetVertexPosSquare(4, FBorder, FBorder, Rect.Width - (FBorder * 2), Rect.Height - (FBorder * 2));
 end;
 
-procedure TGUIPanel.SetBorder(value: TInt);
+procedure TGUIPanel.SetBorder(value: Integer);
 begin
   FBorder:= Value;
   if FBorder < 0 then

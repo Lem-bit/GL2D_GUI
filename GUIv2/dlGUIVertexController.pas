@@ -30,6 +30,8 @@ type
       procedure MakeSquare(pX, pY, pWidth, pHeight: TFloat; pVColor: TColor; pTextureLink: TTextureLink; pGroup: Byte = 0; pHide: Boolean = false); overload;
       procedure MakeSquare(pX, pY, pWidth, pHeight: TFloat; pVColor1, pVColor2, pVColor3, pVColor4: TColor; pTextureLinkArr: TTextureLinkSquadArr; pGroup: Byte = 0; pHide: Boolean = false); overload;
       procedure MakeSquare(pX, pY, pWidth, pHeight: TFloat; pVColor: TColor; pTextureLinkArr: TTextureLinkSquadArr; pGroup: Byte = 0; pHide: Boolean = false); overload;
+      procedure MakeSquareOffset(pLink: Integer; pOffset: integer; pColor: TColor; pTextureLinkArr: TTextureLinkSquadArr; pGroup: Byte = 0; pHide: Boolean = false); overload;
+      procedure MakeSquareOffset(pLink: Integer; pOffset: integer; pVColor1, pVColor2, pVColor3, pVColor4: TColor; pTextureLinkArr: TTextureLinkSquadArr; pGroup: Byte = 0; pHide: Boolean = false); overload;
       //Добавить вершину в список
       procedure Make(pX, pY: TFloat; pColor: TColor; pTU, pTV: TFloat; pGroup: Byte = 0; pHide: Boolean = false);
       //Проверить есть ли вершина по индексу
@@ -224,6 +226,38 @@ procedure TGUIVertexList.MakeSquare(pX, pY, pWidth, pHeight: TFloat; pVColor: TC
   pGroup: Byte = 0; pHide: Boolean = false);
 begin
   MakeSquare(pX, pY, pWidth, pHeight, pVColor, pVColor, pVColor, pVColor, pTextureLinkArr, pGroup, pHide);
+end;
+
+procedure TGUIVertexList.MakeSquareOffset(pLink, pOffset: integer; pVColor1,
+  pVColor2, pVColor3, pVColor4: TColor; pTextureLinkArr: TTextureLinkSquadArr;
+  pGroup: Byte; pHide: Boolean);
+var X, Y: TFloat;
+begin
+  if not IsExists(pLink + 3) then
+    Exit;
+
+  X:= Vertex[pLink].Vertex.X;
+  Y:= Vertex[pLink].Vertex.Y;
+  Make(X + pOffset, Y + pOffset, pVColor1, pTextureLinkArr.Index[0].U, pTextureLinkArr.Index[0].V, pGroup, pHide);
+
+  X:= Vertex[pLink + 1].Vertex.X;
+  Y:= Vertex[pLink + 1].Vertex.Y;
+  Make(X - pOffset, Y + pOffset, pVColor2, pTextureLinkArr.Index[1].U, pTextureLinkArr.Index[1].V, pGroup, pHide);
+
+  X:= Vertex[pLink + 2].Vertex.X;
+  Y:= Vertex[pLink + 2].Vertex.Y;
+  Make(X - pOffset, Y - pOffset, pVColor3, pTextureLinkArr.Index[2].U, pTextureLinkArr.Index[2].V, pGroup, pHide);
+
+  X:= Vertex[pLink + 3].Vertex.X;
+  Y:= Vertex[pLink + 3].Vertex.Y;
+  Make(X + pOffset, Y - pOffset, pVColor4, pTextureLinkArr.Index[3].U, pTextureLinkArr.Index[3].V, pGroup, pHide);
+end;
+
+procedure TGUIVertexList.MakeSquareOffset(pLink, pOffset: integer;
+  pColor: TColor; pTextureLinkArr: TTextureLinkSquadArr; pGroup: Byte;
+  pHide: Boolean);
+begin
+  MakeSquareOffset(pLink, pOffset, pColor, pColor, pColor, pColor, pTextureLinkArr, pGroup, pHide);
 end;
 
 procedure TGUIVertexList.MakeSquare(pX, pY, pWidth, pHeight: TFloat; pVColor: TColor; pTextureLink: TTextureLink; pGroup: Byte = 0; pHide: Boolean = false);

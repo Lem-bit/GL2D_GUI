@@ -39,7 +39,7 @@ type
     published
       procedure SetResize; override;
     public
-      constructor Create(pName: String; pMenuName: String; pX, pY: TInt);
+      constructor Create(pName: String; pMenuName: String; pX, pY: Integer);
       procedure RenderText; override;
       procedure SetColorGradient(pVertexA, pVertexB, pVertexC, pVertexD: TColor);
     published
@@ -63,7 +63,7 @@ type
       procedure SetFontLink(pFont: TGUIFont); override;
     public
       //Создать главное меню Popup
-      constructor Create(pName: String; pX, pY: TInt; pTextureLink: TTextureLink = nil);
+      constructor Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
 
       //Добавить элемент меню
       procedure Add(pMenuName: String; pDisable: Boolean = False; pProc: TGUIProc = nil; pColor: TColor = clWhite);
@@ -112,7 +112,7 @@ begin
   Result:= FMenu.Count;
 end;
 
-constructor TGUIPopupMenu.Create(pName: String; pX, pY: TInt; pTextureLink: TTextureLink = nil);
+constructor TGUIPopupMenu.Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
 begin
   inherited Create(pName, gtcPopupMenu);
   FMenu    := TList.Create;
@@ -410,7 +410,7 @@ end;
 
 { TGUIMenuItem }
 
-constructor TGUIMenuItem.Create(pName, pMenuName: String; pX, pY: TInt);
+constructor TGUIMenuItem.Create(pName, pMenuName: String; pX, pY: Integer);
 begin
   inherited Create(pName);
   FMenuName:= pMenuName;
@@ -420,12 +420,12 @@ begin
   if FMenuLine then
   begin
     FMenuName:= '';
-    VertexList.MakeSquare(0, 0, 100, 25, Color, GUIPalette.GetCellRect(23), GROUP_MENU);
+    VertexList.MakeSquare(0, 0, 100, 25, Color, GUIPalette.GetCellRect(pal_PopupDiv), GROUP_MENU);
   end
   else
-    VertexList.MakeSquare(0, 0, 100, 25, Color, GUIPalette.GetCellRect(3), GROUP_MENU);
+    VertexList.MakeSquare(0, 0, 100, 25, Color, GUIPalette.GetCellRect(pal_3), GROUP_MENU);
 
-  VertexList.MakeSquare(0, 0, 100, 25, Color, GUIPalette.GetCellRect(5), GROUP_SELECTOR, True);
+  VertexList.MakeSquare(0, 0, 100, 25, Color, GUIPalette.GetCellRect(pal_Frame), GROUP_SELECTOR, True);
 end;
 
 function TGUIMenuItem.FocusDisable: Boolean;

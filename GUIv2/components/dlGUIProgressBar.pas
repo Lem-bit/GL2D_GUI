@@ -27,19 +27,19 @@ type
                         );
 
     private
-      FMax         : TInt;
-      FValue       : TInt;
+      FMax         : Integer;
+      FValue       : Integer;
       FStrValue    : String;
 
-      FBorderWidth : TInt;
+      FBorderWidth : Integer;
       FShowText    : TGUIShowTextProp;
     private
       procedure RecalcTextPos;
 
-      procedure SetValue(pValue: TInt);
-      procedure SetBorderWidth(pValue: TInt);
+      procedure SetValue(pValue: Integer);
+      procedure SetBorderWidth(pValue: Integer);
 
-      function GetRectWidthValue: TInt;
+      function GetRectWidthValue: Integer;
       function GetColor: TColor;
 
       procedure SetBorderColor(pColor: TColor);
@@ -50,7 +50,7 @@ type
       procedure SetResize; override; //Применить к вершинам масштабирование Width, Height
       procedure SetAreaResize; override;
     public
-      constructor Create(pName: String; pX, pY: TInt; pTextureLink: TTextureLink = nil);
+      constructor Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
       procedure SetColorGradient(pAColor, pBColor, pCColor, pDColor: TColor);
 
       procedure RenderText; override;
@@ -72,9 +72,9 @@ type
 
       property ShowText   : TGUIShowTextProp read FShowText      write FShowText       default stNone;
       property BorderColor: TColor           read GetBorderColor write SetBorderColor;
-      property BorderWidth: TInt             read FBorderWidth   write SetBorderWidth;
-      property Max        : TInt             read FMax           write FMax;
-      property Value      : TInt             read FValue         write SetValue;
+      property BorderWidth: Integer          read FBorderWidth   write SetBorderWidth;
+      property Max        : Integer          read FMax           write FMax;
+      property Value      : Integer          read FValue         write SetValue;
       property Color      : TColor           read GetColor       write SetColor;
   end;
 
@@ -85,7 +85,7 @@ const GROUP_BORDER = 0;
 
 { TGUIProgressBar }
 
-constructor TGUIProgressBar.Create(pName: String; pX, pY: TInt; pTextureLink: TTextureLink);
+constructor TGUIProgressBar.Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink);
 begin
   inherited Create(pName, gtcProgressBar);
   SetRect(pX, pY, 200, 25);
@@ -94,15 +94,13 @@ begin
   FMax        := 100;
   FValue      := 0;
   Area.Show   := True;
+  Color       := clWhite;
 
   SetTextureLink(pTextureLink);
   RecalcTextPos;
 
-  VertexList.MakeSquare(0, 0, Width, Height, Color, GUIPalette.GetCellRect(0), GROUP_BORDER);
-  VertexList.MakeSquare(FBorderWidth, FBorderWidth, GetRectWidthValue, Height - (FBorderWidth * 2), Color, GUIPalette.GetCellRect(0), GROUP_VALUE);
-
-  VertexList.SetGroupColor(GROUP_BORDER, clBlack);
-  VertexList.SetGroupColor(GROUP_VALUE, clGray);
+  VertexList.MakeSquare(0, 0, Width, Height, Color, GUIPalette.GetCellRect(pal_6), GROUP_BORDER);
+  VertexList.MakeSquare(FBorderWidth, FBorderWidth, GetRectWidthValue, Height - (FBorderWidth * 2), Color, GUIPalette.GetCellRect(pal_3), GROUP_VALUE);
 end;
 
 function TGUIProgressBar.GetBorderColor: TColor;
@@ -115,7 +113,7 @@ begin
   Result:= FColor.GetColor;
 end;
 
-function TGUIProgressBar.GetRectWidthValue: TInt;
+function TGUIProgressBar.GetRectWidthValue: Integer;
 begin
   Result:= 0;
 
@@ -166,7 +164,7 @@ begin
   VertexList.SetGroupColor(GROUP_BORDER, pColor);
 end;
 
-procedure TGUIProgressBar.SetBorderWidth(pValue: TInt);
+procedure TGUIProgressBar.SetBorderWidth(pValue: Integer);
 begin
   FBorderWidth:= pValue;
 
@@ -193,7 +191,7 @@ begin
   RecalcTextPos;
 end;
 
-procedure TGUIProgressBar.SetValue(pValue: TInt);
+procedure TGUIProgressBar.SetValue(pValue: Integer);
 begin
   FValue:= pValue;
 

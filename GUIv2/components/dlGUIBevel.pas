@@ -22,7 +22,7 @@ type
     protected
       procedure SetResize; override;
     public
-      constructor Create(pName: String; pX, pY, pW, pH: TInt; pTextureLink: TTextureLink = nil);
+      constructor Create(pName: String; pX, pY, pW, pH: Integer; pTextureLink: TTextureLink = nil);
     public
       property Shape: TGUIBevelShape read FShape write SetShape;
   end;
@@ -31,7 +31,7 @@ implementation
 
 { TGUIBevel }
 
-constructor TGUIBevel.Create(pName: String; pX, pY, pW, pH: TInt; pTextureLink: TTextureLink);
+constructor TGUIBevel.Create(pName: String; pX, pY, pW, pH: Integer; pTextureLink: TTextureLink);
 begin
   inherited Create(pName, gtcBevel);
 
@@ -43,14 +43,14 @@ begin
   SetTextureLink(pTextureLink);
 
   //Список вершин
-  VertexList.MakeSquare(0, 0, Width, Height, Color, GUIPalette.GetCellRect(2));
+  VertexList.MakeSquare(0, 0, Width, Height, Color, GUIPalette.GetCellRect(pal_2));
   //Замыкающая квадрат вершина
   VertexList.Vertex[VertexList.Count - 1].GapOccur:= True;
   //Установим единичную текстуру
   VertexList.SetVertexTextureOne;
 
   //Список вершин внутренней части
-  VertexList.MakeSquare(1, 1, Width - 2, Height - 2, Color, GUIPalette.GetCellRect(7));
+  VertexList.MakeSquareOffset(0, 1, Color, GUIPalette.GetCellRect(pal_7));
   //Установим единичную текстуру как образец возьмем 4-ю вершину, преобразовать все остальные с 4-й
   VertexList.SetVertexTextureOne(4, 4);
 end;
@@ -67,7 +67,7 @@ begin
 
   case FShape of
     //true так как значение инвертируется если элемент не найден в списке
-    bsBox   : VertexList.SetVertexHideList(true, [-1]);
+    bsBox   : VertexList.SetVertexHideList(true , [-1]);
 
     //
     bsTop   : VertexList.SetVertexHideList(false, [0, 1, 4, 5]);

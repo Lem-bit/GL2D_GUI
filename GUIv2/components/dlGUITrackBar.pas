@@ -19,27 +19,27 @@ uses SysUtils, dlGUITypes, dlGUIFont, Graphics, dlGUIObject, dlGUIPaletteHelper;
 type
   TGUITrackBar = class(TGUIObject)
   private
-    FValue      : TInt; //Текущее значение
-    FMaxValue   : TInt; //Максимальное значение
-    FBorderWidth: TInt; //Ширина рамки
+    FValue      : Integer; //Текущее значение
+    FMaxValue   : Integer; //Максимальное значение
+    FBorderWidth: Integer; //Ширина рамки
 
     FTrackDown  : Boolean; //Нажали на трекер
-    FTrackWidth : TInt; //Ширина трекера
-    FTrackPos   : TInt; //Позиция трекера
-    FTrackOffset: TInt; //Оффсет при нажатии на трекер
+    FTrackWidth : Integer; //Ширина трекера
+    FTrackPos   : Integer; //Позиция трекера
+    FTrackOffset: Integer; //Оффсет при нажатии на трекер
 
     FTrackColor : TColor;
   private
     function GetColor: TColor;
 
     procedure RecalcTextPos;
-    procedure SetValue(pValue: TInt);
-    procedure SetMaxValue(pValue: TInt);
+    procedure SetValue(pValue: Integer);
+    procedure SetMaxValue(pValue: Integer);
     procedure SetTrackPos;
-    procedure SetTrackWidth(pValue: TInt);
+    procedure SetTrackWidth(pValue: Integer);
     procedure SetTrackColor(pValue: TColor);
 
-    function GetRealWidth: TInt; //Ширина поля трекера
+    function GetRealWidth: Integer; //Ширина поля трекера
     function GetCellValue: TFloat;  //Размер (соотношение) 1 пикселя
   protected
     procedure SetFontEvent; override;
@@ -51,7 +51,7 @@ type
     OnTrackMax : TGUIProc;
     OnTrackMove: TGUIProc;
 
-    constructor Create(pName: String; pX, pY: TInt; pTextureLink: TTextureLink = nil);
+    constructor Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
     procedure RenderText; override;
 
     procedure OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton); override;
@@ -74,11 +74,11 @@ type
     property Hint;
     property Blend;
 
-    property TrackColor: TColor read FTrackColor write SetTrackColor;
-    property TrackWidth: TInt   read FTrackWidth write SetTrackWidth;
-    property Value     : TInt   read FValue      write SetValue;
-    property MaxValue  : TInt   read FMaxValue   write SetMaxValue;
-    property Color     : TColor read GetColor    write SetColor;
+    property TrackColor: TColor  read FTrackColor write SetTrackColor;
+    property TrackWidth: Integer read FTrackWidth write SetTrackWidth;
+    property Value     : Integer read FValue      write SetValue;
+    property MaxValue  : Integer read FMaxValue   write SetMaxValue;
+    property Color     : TColor  read GetColor    write SetColor;
   end;
 
 implementation
@@ -87,7 +87,7 @@ const GROUP_TRACK = 1;
 
 { TGUIButton }
 
-constructor TGUITrackBar.Create(pName: String; pX, pY: TInt; pTextureLink: TTextureLink);
+constructor TGUITrackBar.Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink);
 begin
   inherited Create(pName, gtcTrackBar);
 
@@ -107,9 +107,9 @@ begin
 
   SetTextureLink(pTextureLink);
 
-  VertexList.MakeSquare(0, 0, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(2));
-  VertexList.MakeSquare(1, 1, Rect.Width - 2, Rect.Height - 2, Color, GUIPalette.GetCellRect(0));
-  VertexList.MakeSquare(0, 0, FTrackWidth, Rect.Height, FTrackColor, GUIPalette.GetCellRect(24), GROUP_TRACK);
+  VertexList.MakeSquare(0, 0, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_2));
+  VertexList.MakeSquareOffset(0, 1, Color, GUIPalette.GetCellRect(pal_0));
+  VertexList.MakeSquare(0, 0, FTrackWidth, Rect.Height, FTrackColor, GUIPalette.GetCellRect(pal_Track), GROUP_TRACK);
 
 end;
 
@@ -123,7 +123,7 @@ begin
   Result:= FColor.GetColor;
 end;
 
-function TGUITrackBar.GetRealWidth: TInt;
+function TGUITrackBar.GetRealWidth: Integer;
 begin
   Result:= Width - FTrackWidth;
 end;
@@ -225,7 +225,7 @@ begin
   RecalcTextPos;
 end;
 
-procedure TGUITrackBar.SetMaxValue(pValue: TInt);
+procedure TGUITrackBar.SetMaxValue(pValue: Integer);
 begin
   FMaxValue:= pValue;
 
@@ -256,7 +256,7 @@ begin
   VertexList.SetVertexPosSquare(8, FTrackPos, 0, FTrackWidth, Rect.Height);
 end;
 
-procedure TGUITrackBar.SetTrackWidth(pValue: TInt);
+procedure TGUITrackBar.SetTrackWidth(pValue: Integer);
 begin
   FTrackWidth:= pValue;
 
@@ -266,7 +266,7 @@ begin
   SetTrackPos;
 end;
 
-procedure TGUITrackBar.SetValue(pValue: TInt);
+procedure TGUITrackBar.SetValue(pValue: Integer);
 begin
   FValue:= pValue;
 

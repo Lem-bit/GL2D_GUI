@@ -27,21 +27,21 @@ interface
        color : array[0..3] of TGLColor3Rec; //Цвет символа
      public
        //Установить цвет символа
-       procedure SetColor(pColor: TInt);
+       procedure SetColor(pColor: Integer);
    end;
 
    //Для FontMaker
    TGUIFontStream = record
      public
        Name         : String[255]; //Название шрифта
-       Size         : TInt; //Размер шрифта
-       Height       : TInt; //Высота шрифта
-       SquadSize    : TInt; //Размер квадрата для символа
-       OffsetX      : TInt; //Сдвиг символов по X
-       OffsetY      : TInt; //Сдвиг символов по Y
+       Size         : Integer; //Размер шрифта
+       Height       : Integer; //Высота шрифта
+       SquadSize    : Integer; //Размер квадрата для символа
+       OffsetX      : Integer; //Сдвиг символов по X
+       OffsetY      : Integer; //Сдвиг символов по Y
        ShowGrid     : Boolean; //Показывать сетку
        CharInfo     : array[0..High(Byte)] of TGUIFontChar; //Параметры символов
-       Grades       : array[0..1] of TInt; //Максимальная длинна по ширине и высоте
+       Grades       : array[0..1] of Integer; //Максимальная длинна по ширине и высоте
        OffsetTexture: TTextureOffset; //Сдвиг области текстуры (для не стандартных шрифтов)
        CharSpace    : TFloat; //Расстояние между символами
    end;
@@ -56,16 +56,16 @@ interface
    TGUIFont = class(TPersistent)
      private
        FName         : String[255]; //Название шрифта
-       FSize         : TInt;   //Размер шрифта
-       FHeight       : TInt;   //Высота шрифта
-       FSquadSize    : TInt;   //Размер квадратной области для символа
-       FGrades       : array[0..1] of TInt; //Размер сетки 16x16 например
+       FSize         : Integer;   //Размер шрифта
+       FHeight       : Integer;   //Высота шрифта
+       FSquadSize    : Integer;   //Размер квадратной области для символа
+       FGrades       : array[0..1] of Integer; //Размер сетки 16x16 например
        FCharInfo     : TGUIFontCharInfo; //Информация о символах
        FTextureLink  : TTextureLink; //Текстура
        FFileName     : String[255];  //Имя файла
        FColor        : TGLColor; //Основной цвет
-       FOffsetX      : TInt;     //Сдвиг символов по X
-       FOffsetY      : TInt;     //Сдвиг символов по Y
+       FOffsetX      : Integer;  //Сдвиг символов по X
+       FOffsetY      : Integer;  //Сдвиг символов по Y
        FShowArea     : Boolean;  //Показывать рамку вывода
        FScale        : TFloat;   //Размер шрифта
        //Опции
@@ -85,8 +85,8 @@ interface
        //Пересчитать текстурные координаты
        function CalcTextureCoord: Boolean;
        //Отобразить текст
-       procedure RenderText(const pX, pY: TFloat; const pText: String; pMaxWidth: TInt; pUseLineBreak: Boolean = false);
-       procedure Text(const pX, pY: TFloat; const pText: String; pMaxWidth: TInt = 0);
+       procedure RenderText(const pX, pY: TFloat; const pText: String; pMaxWidth: Integer; pUseLineBreak: Boolean = false);
+       procedure Text(const pX, pY: TFloat; const pText: String; pMaxWidth: Integer = 0);
        procedure CopyFrom(pFont: TGUIFont);
        procedure CopyMemoryFrom(pFont: TGUIFont);
        //Скопировать объект текстуры
@@ -99,10 +99,10 @@ interface
        function GetTextWidthMax(pText: String; pMax: TFloat): Integer;
        function GetTextWidth(pText: String): TFloat;
        //
-       function GetTextHeight: TInt;
+       function GetTextHeight: Integer;
        function GetHeight: TFloat;
        //
-       procedure GetTextRect(const pText: String; out pWidth, pHeight: TInt);
+       procedure GetTextRect(const pText: String; out pWidth, pHeight: Integer);
        //
        procedure SetScale(pScale: TFloat);
      public
@@ -231,12 +231,12 @@ begin
   Result:= FScale * FHeight;
 end;
 
-function TGUIFont.GetTextHeight: TInt;
+function TGUIFont.GetTextHeight: Integer;
 begin
   Result:= FHeight;
 end;
 
-procedure TGUIFont.GetTextRect(const pText: String; out pWidth, pHeight: TInt);
+procedure TGUIFont.GetTextRect(const pText: String; out pWidth, pHeight: Integer);
 var Buf: TStringList;
     i: integer;
     Str: String;
@@ -331,7 +331,7 @@ begin
 
 end;
 
-procedure TGUIFont.RenderText(const pX, pY: TFloat; const pText: String; pMaxWidth: TInt; pUseLineBreak: Boolean = false);
+procedure TGUIFont.RenderText(const pX, pY: TFloat; const pText: String; pMaxWidth: Integer; pUseLineBreak: Boolean = false);
 var FID       : Integer;
     abs_pos   : TFloat;
     char_id   : Byte;
@@ -446,7 +446,7 @@ begin
   Result:= True;
 end;
 
-procedure TGUIFont.Text(const pX, pY: TFloat; const pText: String; pMaxWidth: TInt);
+procedure TGUIFont.Text(const pX, pY: TFloat; const pText: String; pMaxWidth: Integer);
 begin
   RenderText(pX, pY, pText, pMaxWidth, False);
 end;
@@ -459,7 +459,7 @@ end;
 
 { TGUIFontChar }
 
-procedure TGUIFontChar.SetColor(pColor: TInt);
+procedure TGUIFontChar.SetColor(pColor: Integer);
 var FID: Integer;
 begin
   for FID := Low(Color) to High(Color) do

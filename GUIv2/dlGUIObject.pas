@@ -65,7 +65,8 @@ type
                         goaTextureNeedRecalc,   //Нужно пересчитать координаты текстуры
                         goaTextureAlwaysRecalc, //Всегда пересчитываем текстуру
                         goaItemSelect,          //Выбрали элемент (у ListBox например)
-                        goaWhell                //Сработала прокрутка
+                        goaWhell,               //Сработала прокрутка
+                        goaUpdateSize           //Поменялись размеры
                       );
 
    TGUIObjectAction = Set of TGUIActionSetter;
@@ -88,10 +89,10 @@ type
    //Размеры текстуры устанавливаются при назначении текстуры объекту
    TGUITextureInfo = record
      public
-       Width : TInt;
-       Height: TInt;
+       Width : Integer;
+       Height: Integer;
      public
-       procedure SetSize(pWidth, pHeight: TInt);
+       procedure SetSize(pWidth, pHeight: Integer);
    end;
 
    //Всплывающая подсказка (Параметры потом передаются в класс Hint'а на форме)
@@ -122,7 +123,7 @@ type
        FDefName    : String; //Имя данное автоматически (для подставки ID, SetID())
        FType       : TGUITypeComponent; //Тип компонента
      protected
-       FUID        : TInt; //Номер объекта в листе
+       FUID        : Integer; //Номер объекта в листе
      protected
        FRect       : TGUIObjectRect; //Позиция и размеры
        FTextOffset : TGUIObjectRect; //Положение текста
@@ -156,8 +157,8 @@ type
        procedure SetPopupMenu(pPopupMenu: TGUIObject);
 
        procedure SetScale(pScale: TFloat); virtual; //Установить размер
-       procedure SetWidth(pWidth: TInt); //Установить ширину компонента
-       procedure SetHeight(pHeight: TInt); //Установить высоту компонента
+       procedure SetWidth(pWidth: Integer); //Установить ширину компонента
+       procedure SetHeight(pHeight: Integer); //Установить высоту компонента
        procedure SetResize; virtual; //Вызывается в SetWidth, SetHeight при изменении размера
        procedure SetHide(pHide: Boolean); virtual;
        procedure SetEnable(pEnable: Boolean); virtual;
@@ -167,7 +168,7 @@ type
        function GetColor: TColor;
        function GetTextureLinkName: String;
        function GetAttrFocused: Boolean;
-       procedure SetID(pID: TInt);
+       procedure SetID(pID: Integer);
        function GetPopupMenuName: String;
        procedure ChangeTextureInfo;
      public
@@ -185,9 +186,11 @@ type
        //Получить ссылку на текущую текстуру
        function GetTextureLink: TTextureLink;
        //Установить размеры компонента
-       procedure SetRect(pX, pY, pW, pH: TInt);
+       procedure SetRect(pX, pY, pW, pH: Integer);
        //Получить какой то другой активный popup например у ListBox
        function GetChildItemPopup: TGUIObject; virtual;
+       //Вызвать SetResize
+       procedure OnResize;
      public
        {RTTI}
        //Получить список публичных свойств
@@ -203,7 +206,7 @@ type
        OnClick               : TGUIProc; //Нажатие на компонент мышью
      public
        property VertexList   : TGUIVertexList    read FVertexList;
-       property ID           : TInt              read FUID                write SetID;
+       property ID           : Integer           read FUID                write SetID;
        property Rect         : TGUIObjectRect    read FRect;
        property TextRect     : TGUIObjectRect    read FTextOffset         write FTextOffset;
        property Focused      : Boolean           read GetAttrFocused;
@@ -212,10 +215,10 @@ type
        property ObjectName   : String            read FDefName;
        property ObjectType   : TGUITypeComponent read FType;
 
-       property X            : TInt              read FRect.X             write FRect.X;
-       property Y            : TInt              read FRect.Y             write FRect.Y;
-       property Width        : TInt              read FRect.Width         write SetWidth;
-       property Height       : TInt              read FRect.Height        write SetHeight;
+       property X            : Integer           read FRect.X             write FRect.X;
+       property Y            : Integer           read FRect.Y             write FRect.Y;
+       property Width        : Integer           read FRect.Width         write SetWidth;
+       property Height       : Integer           read FRect.Height        write SetHeight;
        property Color        : TColor            read GetColor            write SetColor;
 
        property Hide         : Boolean           read FHide               write SetHide;
@@ -252,9 +255,9 @@ type
        //Событие двойное нажатие мыши (даблклик)
        procedure OnMouseDoubleClick(pX, pY: Integer; Button: TGUIMouseButton); virtual;
        //Прокрутка колесика мыши вверх
-       procedure OnMouseWheelUp(Shift: TShiftState; MPosX, MPosY: TInt); virtual;
+       procedure OnMouseWheelUp(Shift: TShiftState; MPosX, MPosY: Integer); virtual;
        //Прокрутка колесика мыши вниз
-       procedure OnMouseWheelDown(Shift: TShiftState; MPosX, MPosY: TInt); virtual;
+       procedure OnMouseWheelDown(Shift: TShiftState; MPosX, MPosY: Integer); virtual;
        //Проверка входит ли координата pX, pY в область компонента
        function OnHit(pX, pY: Integer): Boolean; virtual;
        //Если не попали в OnHit тогда срабатывает это событие
@@ -727,16 +730,21 @@ begin
   end;
 end;
 
-procedure TGUIObject.OnMouseWheelDown(Shift: TShiftState; MPosX, MPosY: TInt);
+procedure TGUIObject.OnMouseWheelDown(Shift: TShiftState; MPosX, MPosY: Integer);
 begin
   if Hide then
     Exit;
 end;
 
-procedure TGUIObject.OnMouseWheelUp(Shift: TShiftState; MPosX, MPosY: TInt);
+procedure TGUIObject.OnMouseWheelUp(Shift: TShiftState; MPosX, MPosY: Integer);
 begin
   if Hide then
     Exit;
+end;
+
+procedure TGUIObject.OnResize;
+begin
+  SetResize;
 end;
 
 procedure TGUIObject.OutHit(pX, pY: Integer);
@@ -905,7 +913,7 @@ begin
   ChangeTextureInfo;
 end;
 
-procedure TGUIObject.SetRect(pX, pY, pW, pH: TInt);
+procedure TGUIObject.SetRect(pX, pY, pW, pH: Integer);
 begin
   FRect.SetRect(pX, pY, pW, pH);
   SetResize;
@@ -920,7 +928,7 @@ begin
   FScale:= pScale;
 end;
 
-procedure TGUIObject.SetWidth(pWidth: TInt);
+procedure TGUIObject.SetWidth(pWidth: Integer);
 begin
   if FRect.Width = pWidth then
     Exit;
@@ -929,7 +937,7 @@ begin
   SetResize;
 end;
 
-procedure TGUIObject.SetHeight(pHeight: TInt);
+procedure TGUIObject.SetHeight(pHeight: Integer);
 begin
   if FRect.Height = pHeight then
     Exit;
@@ -943,7 +951,7 @@ begin
   FHide:= pHide;
 end;
 
-procedure TGUIObject.SetID(pID: TInt);
+procedure TGUIObject.SetID(pID: Integer);
 begin
   if FUID <> -1 then
     FUID:= pID;
@@ -965,7 +973,7 @@ end;
 
 { TGUITextureInfo }
 
-procedure TGUITextureInfo.SetSize(pWidth, pHeight: TInt);
+procedure TGUITextureInfo.SetSize(pWidth, pHeight: Integer);
 begin
   Width := pWidth;
   Height:= pHeight;

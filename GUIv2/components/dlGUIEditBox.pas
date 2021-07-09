@@ -32,15 +32,15 @@ type
 
   TGUIEditBox = class(TGUIObject)
     private
-      FOffsetX    : TInt; //Сдвиг текста
+      FOffsetX    : Integer; //Сдвиг текста
 
       FDrawText   : String; //Текст который рисуем
       FText       : String; //Текст
       FCursor     : TGUICursor; //Мигающий курсор
-      FCursorWidth: TInt; //Ширина курсора
+      FCursorWidth: Integer; //Ширина курсора
 
       FUpdate     : Boolean; //Текст изменился
-      FMaxLength  : TInt; //Макс длинна текста
+      FMaxLength  : Integer; //Макс длинна текста
 
       FTypeInput  : TGUITypeInput; //Тип ввода символов (любые, только цифры)
       FMask       : String; //Маска ввода (какие символы разрешено вводить)
@@ -48,8 +48,8 @@ type
 
       FBorderStyle: TGUIBorderStyle;
     private
-      function SetCursorPos(pValue: TInt): Boolean;
-      procedure SetMaxLength(pMaxLength: TInt);
+      function SetCursorPos(pValue: Integer): Boolean;
+      procedure SetMaxLength(pMaxLength: Integer);
       procedure SetText(pText: String);
       procedure UpdateCursorRect;
       procedure SetBorderStyle(pBorderStyle: TGUIBorderStyle);
@@ -58,12 +58,12 @@ type
       procedure SetFontEvent; override;
       procedure SetResize; override;
     public
-      constructor Create(pName: String; pX, pY: TInt; pTextureLink: TTextureLink = nil);
+      constructor Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
 
       procedure OnKeyDown(var Key: Word; Shift: TShiftState); override;
       procedure OnKeyPress(Key: Char); override;
 
-      procedure OnMouseDown(pX, pY: TInt; Button: TGUIMouseButton); override;
+      procedure OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton); override;
 
       procedure RenderText; override;
       procedure Render; override;
@@ -83,9 +83,9 @@ type
       property Hint;
       property Blend;
 
-      property CursorWidth: TInt            read FCursorWidth write FCursorWidth;
+      property CursorWidth: Integer         read FCursorWidth write FCursorWidth;
       property Text       : String          read FText        write SetText;
-      property MaxLength  : TInt            read FMaxLength   write SetMaxLength;
+      property MaxLength  : Integer         read FMaxLength   write SetMaxLength;
       property TypeInput  : TGUITypeInput   read FTypeInput   write FTypeInput;
       property Mask       : String          read FMask        write FMask;
       property ReadOnly   : Boolean         read FReadOnly    write FReadOnly;
@@ -98,7 +98,7 @@ const GROUP_CURSOR = 1;
 
 { TGUIEditBox }
 
-constructor TGUIEditBox.Create(pName: String; pX, pY: TInt; pTextureLink: TTextureLink = nil);
+constructor TGUIEditBox.Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
 begin
   inherited Create(pName, gtcEditBox);
 
@@ -115,8 +115,8 @@ begin
 
   SetTextureLink(pTextureLink);
 
-  VertexList.MakeSquare(0, 0, Width, Height, Color, GUIPalette.GetCellRect(5));
-  VertexList.MakeSquare(1, 1, Width - 2, Height - 2, Color, GUIPalette.GetCellRect(4));
+  VertexList.MakeSquare(0, 0, Width, Height, Color, GUIPalette.GetCellRect(pal_Frame));
+  VertexList.MakeSquareOffset(0, 1, Color, GUIPalette.GetCellRect(pal_Window));
   UpdateCursorRect;
 end;
 
@@ -185,8 +185,8 @@ begin
   SetCursorPos(FCursor.CharPos + 1);
 end;
 
-procedure TGUIEditBox.OnMouseDown(pX, pY: TInt; Button: TGUIMouseButton);
-var i   : TInt;
+procedure TGUIEditBox.OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton);
+var i   : Integer;
     BPos: TFloat;
 begin
   inherited;
@@ -283,8 +283,8 @@ begin
 
 end;
 
-function TGUIEditBox.SetCursorPos(pValue: TInt): Boolean;
-var OldCharPos: TInt;
+function TGUIEditBox.SetCursorPos(pValue: Integer): Boolean;
+var OldCharPos: Integer;
 begin
   FUpdate        := True;
   Result         := True;
@@ -336,7 +336,7 @@ begin
     FTextOffset.Y:= 0;
 end;
 
-procedure TGUIEditBox.SetMaxLength(pMaxLength: TInt);
+procedure TGUIEditBox.SetMaxLength(pMaxLength: Integer);
 begin
   FMaxLength:= pMaxLength;
   if FMaxLength < 0 then

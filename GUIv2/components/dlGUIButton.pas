@@ -29,7 +29,7 @@ interface
         procedure SetResize; override; //Применить к вершинам масштабирование Width, Height
         procedure SetFlat(pFlat: Boolean);
       public
-        constructor Create(pName: String; pCaption: String; pX, pY: TInt; pTextureLink: TTextureLink = nil);
+        constructor Create(pName: String; pCaption: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
 
         procedure OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton); override;
         procedure OnMouseUp(pX, pY: Integer; Button: TGUIMouseButton); override;
@@ -65,7 +65,7 @@ const GROUP_DOWN        = 0;
       GROUP_UP          = 2;
       GROUP_UP_BORDER   = 3;
 
-constructor TGUIButton.Create(pName: String; pCaption: String; pX, pY: TInt; pTextureLink: TTextureLink = nil);
+constructor TGUIButton.Create(pName: String; pCaption: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
 begin
   inherited Create(pName, gtcButton);
 
@@ -77,11 +77,11 @@ begin
   RecalcTextPos;
   SetTextureLink(pTextureLink);
 
-  VertexList.MakeSquare(0, 0, Width, Height, Color, GUIPalette.GetCellRect(5), GROUP_UP);
-  VertexList.MakeSquare(1, 1, Width - 2, Height - 2, Color, GUIPalette.GetCellRect(4), GROUP_UP_BORDER, FFlat);
+  VertexList.MakeSquare(0, 0, Width, Height, Color, GUIPalette.GetCellRect(pal_Frame), GROUP_UP);
+  VertexList.MakeSquareOffset(0, 1, Color, GUIPalette.GetCellRect(pal_Window), GROUP_UP_BORDER, FFlat);
 
-  VertexList.MakeSquare(0, 0, Width, Height, Color, GUIPalette.GetCellRect(2), GROUP_DOWN, True);
-  VertexList.MakeSquare(1, 1, Width - 2, Height - 2, Color, GUIPalette.GetCellRect(3), GROUP_DOWN_BORDER, True);
+  VertexList.MakeSquare(0, 0, Width, Height, Color, GUIPalette.GetCellRect(pal_2), GROUP_DOWN, True);
+  VertexList.MakeSquareOffset(8, 1, Color, GUIPalette.GetCellRect(pal_3), GROUP_DOWN_BORDER, True);
 end;
 
 procedure TGUIButton.OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton);

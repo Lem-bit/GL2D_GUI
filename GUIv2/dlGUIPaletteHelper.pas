@@ -19,16 +19,62 @@ uses SysUtils, dlGUITypes;
 const DEFAULT_CELL_SIZE  = 18; //Размер ячейки (Квадратный)
       DEFAULT_COUNT_LINE = 7;  //Макс кол-во ячеек в длинну
 
+const
+   pal_0      = 0;
+   pal_1      = 1;
+   pal_2      = 2;
+   pal_3      = 3;
+   pal_Window = 4;
+   pal_Frame  = 5;
+   pal_6      = 6;
+   pal_7      = 7;
+
+   pal_CheckBox_uc    = 8;
+   pal_CheckBox_ch    = 9;
+   pal_RadioButton_uc = 10;
+   pal_RadioButton_ch = 11;
+   pal_ArrowUp        = 12;
+   pal_ArrowDn        = 13;
+   pal_ArrowLeft      = 14;
+   pal_ArrowRight     = 15;
+
+   pal_16       = 16;
+   pal_17       = 17;
+   pal_Mouse    = 18;
+   pal_19       = 19;
+   pal_20       = 20;
+   pal_21       = 21;
+   pal_22       = 22;
+   pal_PopupDiv = 23;
+
+   pal_Track         = 24;
+   pal_TrackerVert   = 25;
+   pal_TrackerHoriz  = 26;
+   pal_BtnCloseUp    = 27;
+   pal_BtnCloseDn    = 28;
+   pal_BtnMinimizeUp = 29;
+   pal_BtnMinimizeDn = 30;
+   pal_31            = 31;
+
+   pal_32 = 32;
+   pal_33 = 33;
+   pal_34 = 34;
+   pal_35 = 35;
+   pal_36 = 36;
+   pal_37 = 37;
+   pal_38 = 38;
+   pal_Transparent = 39;
+
 type
   TGUIPaletteHelper = class
     private
       //Размер ячейки (Квадратный)
-      FCellSize    : TInt;
+      FCellSize    : Integer;
       //Макс кол-во ячеек в длинну
-      FCountLineMax: TInt;
+      FCountLineMax: Integer;
     public
-      constructor Create(pCellSize: TInt = DEFAULT_CELL_SIZE; pMaxCountInLine: TInt = DEFAULT_COUNT_LINE);
-      function GetCellRect(pIndex: TInt): TTextureLinkSquadArr;
+      constructor Create(pCellSize: Integer = DEFAULT_CELL_SIZE; pMaxCountInLine: Integer = DEFAULT_COUNT_LINE);
+      function GetCellRect(pIndex: Integer): TTextureLinkSquadArr;
   end;
 
 var GUIPalette: TGUIPaletteHelper;
@@ -37,7 +83,7 @@ implementation
 
 { TGUIPalletteHelper }
 
-constructor TGUIPaletteHelper.Create(pCellSize: TInt = DEFAULT_CELL_SIZE; pMaxCountInLine: TInt = DEFAULT_COUNT_LINE);
+constructor TGUIPaletteHelper.Create(pCellSize: Integer = DEFAULT_CELL_SIZE; pMaxCountInLine: Integer = DEFAULT_COUNT_LINE);
 begin
 
   if pCellSize < 0 then
@@ -52,7 +98,7 @@ begin
 
 end;
 
-function TGUIPaletteHelper.GetCellRect(pIndex: TInt): TTextureLinkSquadArr;
+function TGUIPaletteHelper.GetCellRect(pIndex: Integer): TTextureLinkSquadArr;
 var X: Integer;
     Y: Integer;
 

@@ -36,7 +36,7 @@ type
        //Установить ссылку на текстуру
        procedure SetTextureLink(pTextureLink: TTextureLink); override;
     public
-      constructor Create(pName: String; pX, pY: TInt; pTextureLink: TTextureLink = nil);
+      constructor Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
 
       destructor Destroy; override;
 
@@ -47,8 +47,8 @@ type
       procedure OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton); override;
       procedure OnMouseUp(pX, pY: Integer; Button: TGUIMouseButton); override;
       procedure OnMouseMove(pX, pY: Integer); override;
-      procedure OnMouseWheelUp(Shift: TShiftState; MPosX, MPosY: TInt); override;
-      procedure OnMouseWheelDown(Shift: TShiftState; MPosX, MPosY: TInt); override;
+      procedure OnMouseWheelUp(Shift: TShiftState; MPosX, MPosY: Integer); override;
+      procedure OnMouseWheelDown(Shift: TShiftState; MPosX, MPosY: Integer); override;
       function OnHit(pX, pY: Integer): Boolean; override;
       procedure OutHit(pX, pY: Integer); override;
       procedure OnMouseOver(pX, pY: Integer); override;
@@ -84,9 +84,9 @@ procedure TGUIComboBox.ChangeButtonImage;
 var ImgIndex: Integer;
 begin
   if FList.Hide then
-    ImgIndex:= 13
+    ImgIndex:= pal_ArrowDn
   else
-    ImgIndex:= 12;
+    ImgIndex:= pal_ArrowUp;
 
   FButton.VertexList.SetVertexTextureMap(0, GUIPalette.GetCellRect(ImgIndex));
   FButton.VertexList.SetVertexTextureMap(8, GUIPalette.GetCellRect(ImgIndex));
@@ -108,7 +108,7 @@ begin
     Result:= 0;
 end;
 
-constructor TGUIComboBox.Create(pName: String; pX, pY: TInt; pTextureLink: TTextureLink);
+constructor TGUIComboBox.Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink);
 begin
   inherited Create(pName, gtcComboBox);
   FArea:= TGUITypeArea.Create;
@@ -347,14 +347,14 @@ begin
     TGUIObject(FComponent[i]).OnMouseUp(pX, pY, Button);
 end;
 
-procedure TGUIComboBox.OnMouseWheelDown(Shift: TShiftState; MPosX, MPosY: TInt);
+procedure TGUIComboBox.OnMouseWheelDown(Shift: TShiftState; MPosX, MPosY: Integer);
 var i: integer;
 begin
   for i := 0 to FComponent.Count - 1 do
     TGUIObject(FComponent[i]).OnMouseWheelDown(Shift, MPosX, MPosY);
 end;
 
-procedure TGUIComboBox.OnMouseWheelUp(Shift: TShiftState; MPosX, MPosY: TInt);
+procedure TGUIComboBox.OnMouseWheelUp(Shift: TShiftState; MPosX, MPosY: Integer);
 var i: integer;
 begin
   for i := 0 to FComponent.Count - 1 do

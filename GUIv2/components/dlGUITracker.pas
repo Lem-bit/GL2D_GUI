@@ -24,35 +24,35 @@ type
           BTN_DNR = 2; //Кнопка 2
           TRK_OBJ = 3; //Трекер
   private
-    FSize        : TInt; //Размер квадрата (кнопки)
+    FSize        : Integer; //Размер квадрата (кнопки)
     FButton      : array[BTN_UPL..BTN_DNR] of TGUIButton; //1 - up, 2 - down
     FTrack       : TGUIImage;
-    FTrackOffsetX: TInt; //
-    FTrackOffsetY: TInt; //
+    FTrackOffsetX: Integer; //
+    FTrackOffsetY: Integer; //
     FStyle       : TGUITrackerStyle; //Стиль прорисовки
     FDownColor   : TColor;  //Цвет при нажатии на элемент управления
     FShowTrack   : Boolean; //Показывать трекер
 
-    FMaxValue    : TInt;    //Макс кол-во элементов
-    FCurrValue   : TInt;    //Текущее положение на каком элементе
+    FMaxValue    : Integer; //Макс кол-во элементов
+    FCurrValue   : Integer; //Текущее положение на каком элементе
   private
     //Позиция кнопки по X, pBtnIndex - индекс кнопки BTN_UP, BTN_DN...
     function GetObjPosX(pObjIndex: integer): Integer;
     function GetObjPosY(pObjIndex: integer): Integer;
 
     //Макс высота
-    function GetMaxHeight: TInt;
+    function GetMaxHeight: Integer;
     //Макс ширина
-    function GetMaxWidth: TInt;
+    function GetMaxWidth: Integer;
   private
     procedure SetShowTrack(pValue: Boolean);
-    procedure SetMaxValue(pValue: TInt);
+    procedure SetMaxValue(pValue: Integer);
 
-    function GetCurrPoint: TInt; //Текущее положение по Х или Y в зависимости от значение FCurrValue
-    procedure SetTrackPos(pValue: TInt); //Установить позицию трекера
-    procedure SetValue(pValue: TInt);
+    function GetCurrPoint: Integer; //Текущее положение по Х или Y в зависимости от значение FCurrValue
+    procedure SetTrackPos(pValue: Integer); //Установить позицию трекера
+    procedure SetValue(pValue: Integer);
 
-    procedure SetTrackerPosByValue(pValue: TInt); //Установить позицию трекера по номеру элемента FCurrValue например
+    procedure SetTrackerPosByValue(pValue: Integer); //Установить позицию трекера по номеру элемента FCurrValue например
 
     procedure ButtonUpLeftClick(Sender: TObject; ParamObj: Pointer = nil);
     procedure ButtonDnRightClick(Sender: TObject; ParamObj: Pointer = nil);
@@ -63,28 +63,28 @@ type
     OnMinValue: TGUIProc; //Минимальное значение
     OnMaxValue: TGUIProc; //Максимальное значение
   public
-    constructor Create(pLeft, pTop, pWidth, pHeight: TInt; pTrackerStyle: TGUITrackerStyle; pTextureLink: TTextureLink = nil);
+    constructor Create(pLeft, pTop, pWidth, pHeight: Integer; pTrackerStyle: TGUITrackerStyle; pTextureLink: TTextureLink = nil);
     procedure SetTextureLink(pTextureLink: TTextureLink); override;
 
-    function GetTrackerValue: TInt; //Текущий элемент
-    function GetTrackerPos: TInt; //Позиция трекера 0..100 в процентах
+    function GetTrackerValue: Integer; //Текущий элемент
+    function GetTrackerPos: Integer; //Позиция трекера 0..100 в процентах
 
     procedure OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton); override;
     procedure OnMouseUp(pX, pY: Integer; Button: TGUIMouseButton); override;
     procedure OnMouseMove(pX, pY: Integer); override;
-    procedure OnMouseWheelUp(Shift: TShiftState; MPosX, MPosY: TInt); override;
-    procedure OnMouseWheelDown(Shift: TShiftState; MPosX, MPosY: TInt); override;
+    procedure OnMouseWheelUp(Shift: TShiftState; MPosX, MPosY: Integer); override;
+    procedure OnMouseWheelDown(Shift: TShiftState; MPosX, MPosY: Integer); override;
 
     //Изменить размер трекера по Parent.Rect с учетом BorderSize вернуть максимальное значение для Rect.Width или Height
     //В зависимости от типа трекера
-    function Resize(pRect: TGUIObjectRect; pBorderSize: TInt = 0; pOffset: TInt = 0): TInt;
+    function Resize(pRect: TGUIObjectRect; pBorderSize: Integer = 0; pOffset: Integer = 0): Integer;
 
     procedure Render; override;
   public
     property DownColor: TColor  read FDownColor write FDownColor;
     property ShowTrack: Boolean read FShowTrack write SetShowTrack;
-    property MaxValue : TInt    read FMaxValue  write SetMaxValue;
-    property Size     : TInt    read FSize;
+    property MaxValue : Integer read FMaxValue  write SetMaxValue;
+    property Size     : Integer read FSize;
   end;
 
   //Класс - Интерфейс с трекерами для объектов (ListBox, Memo, Table...)
@@ -100,9 +100,9 @@ type
       procedure CreateTrackers;
 
     protected
-      FBorder   : TInt;
-      FMaxWidth : TInt;
-      FMaxHeight: TInt;
+      FBorder   : Integer;
+      FMaxWidth : Integer;
+      FMaxHeight: Integer;
     protected
       function GetHorizTracker: TGUITracker;
       function GetVertTracker: TGUITracker;
@@ -113,6 +113,8 @@ type
       procedure SetResize; override;
     public
       procedure SetTextureLink(pTextureLink: TTextureLink); override;
+      function ClientWidth: Integer; //Ширина с учетом трекеров
+      function ClientHeight: Integer; //Высота с учетом трекеров
     public
       constructor Create(pName: String; pType: TGUITypeComponent; pX, pY, pW, pH: Integer; pTextureLink: TTextureLink);
       destructor Destroy; override;
@@ -120,8 +122,8 @@ type
       procedure OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton); override;
       procedure OnMouseUp(pX, pY: Integer; Button: TGUIMouseButton); override;
       procedure OnMouseMove(pX, pY: Integer); override;
-      procedure OnMouseWheelUp(Shift: TShiftState; MPosX, MPosY: TInt); override;
-      procedure OnMouseWheelDown(Shift: TShiftState; MPosX, MPosY: TInt); override;
+      procedure OnMouseWheelUp(Shift: TShiftState; MPosX, MPosY: Integer); override;
+      procedure OnMouseWheelDown(Shift: TShiftState; MPosX, MPosY: Integer); override;
 
       procedure Render; override;
   end;
@@ -142,17 +144,17 @@ begin
   SetTrackPos(GetCurrPoint);
 end;
 
-function TGUITracker.GetMaxHeight: TInt;
+function TGUITracker.GetMaxHeight: Integer;
 begin
   Result:= Height - (FSize * 3);
 end;
 
-function TGUITracker.GetMaxWidth: TInt;
+function TGUITracker.GetMaxWidth: Integer;
 begin
   Result:= Width - (FSize * 2);
 end;
 
-function TGUITracker.GetCurrPoint: TInt;
+function TGUITracker.GetCurrPoint: Integer;
 begin
   //Получить позицию трекера по текущему элементу
   Result:= 0;
@@ -169,7 +171,7 @@ begin
   end;
 end;
 
-function TGUITracker.GetTrackerPos: TInt;
+function TGUITracker.GetTrackerPos: Integer;
 var Persent: TFloat;
 begin
   //Получить текущий элемент по позиции трекера
@@ -304,7 +306,7 @@ begin
       FButton[i].OnMouseMove(pX, pY);
 end;
 
-constructor TGUITracker.Create(pLeft, pTop, pWidth, pHeight: TInt; pTrackerStyle: TGUITrackerStyle; pTextureLink: TTextureLink);
+constructor TGUITracker.Create(pLeft, pTop, pWidth, pHeight: Integer; pTrackerStyle: TGUITrackerStyle; pTextureLink: TTextureLink);
 var i: integer;
     imgOff: integer;
 begin
@@ -359,7 +361,7 @@ begin
   FTrack.Area.Show:= False;
 
   //Область трекера + кнопок
-  VertexList.MakeSquare(0, 0, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(4));
+  VertexList.MakeSquare(0, 0, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_Window));
 end;
 
 function TGUITracker.GetObjPosX(pObjIndex: integer): Integer;
@@ -406,17 +408,17 @@ begin
   end;
 end;
 
-function TGUITracker.GetTrackerValue: TInt;
+function TGUITracker.GetTrackerValue: Integer;
 begin
   Result:= FCurrValue;
 end;
 
-procedure TGUITracker.OnMouseWheelDown(Shift: TShiftState; MPosX, MPosY: TInt);
+procedure TGUITracker.OnMouseWheelDown(Shift: TShiftState; MPosX, MPosY: Integer);
 begin
   ButtonDnRightClick(Self, nil);
 end;
 
-procedure TGUITracker.OnMouseWheelUp(Shift: TShiftState; MPosX, MPosY: TInt);
+procedure TGUITracker.OnMouseWheelUp(Shift: TShiftState; MPosX, MPosY: Integer);
 begin
   ButtonUpLeftClick(Self, nil);
 end;
@@ -437,7 +439,7 @@ begin
       FButton[i].Render;
 end;
 
-function TGUITracker.Resize(pRect: TGUIObjectRect; pBorderSize: TInt = 0; pOffset: TInt = 0): TInt;
+function TGUITracker.Resize(pRect: TGUIObjectRect; pBorderSize: Integer = 0; pOffset: Integer = 0): Integer;
 begin
   Result:= 0;
 
@@ -478,7 +480,7 @@ begin
   end;
 end;
 
-procedure TGUITracker.SetMaxValue(pValue: TInt);
+procedure TGUITracker.SetMaxValue(pValue: Integer);
 begin
   //Установим максимальное значение
   FMaxValue:= pValue;
@@ -516,7 +518,7 @@ begin
     FButton[i].Enable:= FShowTrack;
 end;
 
-procedure TGUITracker.SetTrackerPosByValue(pValue: TInt);
+procedure TGUITracker.SetTrackerPosByValue(pValue: Integer);
 begin
 
   case FStyle of
@@ -526,7 +528,7 @@ begin
 
 end;
 
-procedure TGUITracker.SetTrackPos(pValue: TInt);
+procedure TGUITracker.SetTrackPos(pValue: Integer);
 begin
   if Hide then
   begin
@@ -588,7 +590,7 @@ begin
 
 end;
 
-procedure TGUITracker.SetValue(pValue: TInt);
+procedure TGUITracker.SetValue(pValue: Integer);
 begin
   //Установим значение
   FCurrValue:= pValue;
@@ -616,6 +618,22 @@ end;
 
 
 { TGUITrackerIntf }
+
+function TGUITrackerIntf.ClientHeight: Integer;
+begin
+  if VTracker.Hide then
+    Result:= Height
+  else
+    Result:= Height - VTracker.Size;
+end;
+
+function TGUITrackerIntf.ClientWidth: Integer;
+begin
+  if HTracker.Hide then
+    Result:= Width
+  else
+    Result:= Width - HTracker.Size;
+end;
 
 constructor TGUITrackerIntf.Create(pName: String; pType: TGUITypeComponent; pX, pY, pW, pH: Integer; pTextureLink: TTextureLink);
 begin
@@ -683,13 +701,13 @@ begin
     FTracker[i].OnMouseUp(pX, pY, Button);
 end;
 
-procedure TGUITrackerIntf.OnMouseWheelDown(Shift: TShiftState; MPosX, MPosY: TInt);
+procedure TGUITrackerIntf.OnMouseWheelDown(Shift: TShiftState; MPosX, MPosY: Integer);
 begin
   if goaFocused in GetAction then
     VTracker.OnMouseWheelDown(Shift, MPosX, MPosY);
 end;
 
-procedure TGUITrackerIntf.OnMouseWheelUp(Shift: TShiftState; MPosX, MPosY: TInt);
+procedure TGUITrackerIntf.OnMouseWheelUp(Shift: TShiftState; MPosX, MPosY: Integer);
 begin
   if goaFocused in GetAction then
     VTracker.OnMouseWheelUp(Shift, MPosX, MPosY);
@@ -706,7 +724,7 @@ begin
 end;
 
 procedure TGUITrackerIntf.SetResize;
-var AOffset: TInt;
+var AOffset: Integer;
 begin
   AOffset:= 0;
   if not HTracker.Hide then

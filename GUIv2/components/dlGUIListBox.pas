@@ -48,13 +48,13 @@ type
   private
     const GR_MAIN = 1;  //Группа вершин
   private
-    FLineSpacing : TInt; //Межстрочный интервал
+    FLineSpacing : Integer; //Межстрочный интервал
     FBufMouse    : TMousePoint;
-    FItemHeight  : TInt;
+    FItemHeight  : Integer;
 
-    FSelected    : TInt; //Выбранный элемент
-    FYOffset     : TInt; //Сдвиг по Y
-    FXOffset     : TInt; //Сдвиг по Х
+    FSelected    : Integer; //Выбранный элемент
+    FYOffset     : Integer; //Сдвиг по Y
+    FXOffset     : Integer; //Сдвиг по Х
     FItem        : TList; //Список элементов
 
     FBrushColor  : TColor;
@@ -76,13 +76,13 @@ type
     procedure SetResize; override;
     procedure SetHide(pHide: Boolean); override;
   public
-    constructor Create(pName: String; pX, pY: TInt; pTextureLink: TTextureLink = nil);
+    constructor Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
 
     procedure OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton); override;
     procedure OnMouseUp(pX, pY: Integer; Button: TGUIMouseButton); override;
     procedure OnMouseMove(pX, pY: Integer); override;
-    procedure OnMouseWheelUp(Shift: TShiftState; MPosX, MPosY: TInt); override;
-    procedure OnMouseWheelDown(Shift: TShiftState; MPosX, MPosY: TInt); override;
+    procedure OnMouseWheelUp(Shift: TShiftState; MPosX, MPosY: Integer); override;
+    procedure OnMouseWheelDown(Shift: TShiftState; MPosX, MPosY: Integer); override;
 
     procedure SetTextureLink(pTextureLink: TTextureLink); override;
     destructor Destroy; override;
@@ -242,7 +242,7 @@ begin
     VTracker.MaxValue := FItem.Count;
 end;
 
-constructor TGUIListBox.Create(pName: String; pX, pY: TInt; pTextureLink: TTextureLink);
+constructor TGUIListBox.Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink);
 begin
   inherited Create(pName, gtcListBox, pX, pY, 200, 200, pTextureLink);
 
@@ -256,10 +256,10 @@ begin
   SetRect(pX, pY, 200, 200);
 
   //Область компонента
-  VertexList.MakeSquare(0, 0, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(5));
+  VertexList.MakeSquare(0, 0, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_Frame));
   //Рамка
-  VertexList.MakeSquare(FBorder, FBorder, Rect.Width - (FBorder * 2), Rect.Height - (FBorder * 2), Color, GUIPalette.GetCellRect(2));
-  VertexList.MakeSquare(FBorder, FBorder, FMaxWidth, FMaxHeight, Color, GUIPalette.GetCellRect(0), GR_MAIN);
+  VertexList.MakeSquare(FBorder, FBorder, Rect.Width - (FBorder * 2), Rect.Height - (FBorder * 2), Color, GUIPalette.GetCellRect(pal_2));
+  VertexList.MakeSquare(FBorder, FBorder, FMaxWidth, FMaxHeight, Color, GUIPalette.GetCellRect(pal_0), GR_MAIN);
   VertexList.SetGroupColor(GR_MAIN, FBrushColor);
 
   VTracker.OnMove:= OnMoveVertTracker;
@@ -371,7 +371,7 @@ begin
     FTracker[i].OnMouseUp(pX, pY, Button);
 end;
 
-procedure TGUIListBox.OnMouseWheelDown(Shift: TShiftState; MPosX, MPosY: TInt);
+procedure TGUIListBox.OnMouseWheelDown(Shift: TShiftState; MPosX, MPosY: Integer);
 begin
   if not (goaFocused in GetAction) then
     Exit;
@@ -380,7 +380,7 @@ begin
   SetAction([goaWhell]);
 end;
 
-procedure TGUIListBox.OnMouseWheelUp(Shift: TShiftState; MPosX, MPosY: TInt);
+procedure TGUIListBox.OnMouseWheelUp(Shift: TShiftState; MPosX, MPosY: Integer);
 begin
   if not (goaFocused in GetAction) then
     Exit;
@@ -434,7 +434,7 @@ begin
 end;
 
 procedure TGUIListBox.SetResize;
-var AOffset: TInt;
+var AOffset: Integer;
 begin
   AOffset:= 0;
   if not HTracker.Hide then
@@ -565,16 +565,16 @@ constructor TGUIListBoxItem.Create(pText: String; pTextureLink: TTextureLink);
 begin
   inherited Create;
 
-  FText          := pText;
-  FOutText       := pText;
-  FSelected      := False;
+  FText    := pText;
+  FOutText := pText;
+  FSelected:= False;
+  Area.Show:= True;
 
-  Area.Color.SetColor($00002E5B);
+{  Area.Color.SetColor($00002E5B);
   Area.Blend.Set_SrcAlpha_OneMinusSrcAlpha;
   Area.DrawMode     := GL_QUADS;
   Area.Speed        := 0.04;
-  Area.AnimEnable   := True;
-  Area.Show         := True;
+  Area.AnimEnable   := True;}
 
   VertexList.MakeSquare(0, 0, 0, 0, Color, nil);
 end;
@@ -584,7 +584,7 @@ begin
   VertexList.SetVertexPosSquare(0, 0, 0, Rect.Width, Rect.Height);
 
   if FSelected then
-    Color:= $0000458A
+    Color:= $004F4F4F
   else
     Color:= FBrushColor;
 

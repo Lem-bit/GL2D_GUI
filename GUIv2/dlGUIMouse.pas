@@ -41,7 +41,7 @@ begin
 
   SetTextureLink(pTextureLink);
 
-  VertexList.MakeSquare(0, 0, 16, 16, Color, GUIPalette.GetCellRect(18));
+  VertexList.MakeSquare(0, 0, 16, 16, Color, GUIPalette.GetCellRect(pal_Mouse));
 end;
 
 procedure TGUIMouse.OnMouseMove(pX, pY: Integer);
@@ -52,10 +52,7 @@ end;
 
 procedure TGUIMouse.Render;
 begin
-  //glBlendEquation(GL_FUNC_ADD);
-
   inherited;
-
 end;
 
 end.

@@ -35,8 +35,8 @@ type
   //Информация о загруженной текстуре для передачи в FTexture
   TTextureInfo = record
     public
-      Width : TInt;
-      Height: TInt;
+      Width : Integer;
+      Height: Integer;
       Link  : TUInt;
       Load  : Boolean;
     public
@@ -61,7 +61,7 @@ type
       FErrors          : TTextureError; //Ошибки загрузки
       FLoadFromResource: Boolean; //Загрузка с ресурсов
     private
-      function CreateTexture(const AWidth, AHeight: TInt; const AData: Pointer): TUInt;
+      function CreateTexture(const AWidth, AHeight: Integer; const AData: Pointer): TUInt;
 
       function LoadBMPFromFile(const AFileName: String; out InfoHeader: BITMAPINFOHEADER): Pointer;
       function LoadBMPFromRes(const AName: String; out InfoHeader: BITMAPINFOHEADER): Pointer;
@@ -128,7 +128,7 @@ begin
   FLoadFromResource     := False;
 end;
 
-function TTextureLoader.CreateTexture(const AWidth, AHeight: TInt; const AData: Pointer): TUInt;
+function TTextureLoader.CreateTexture(const AWidth, AHeight: Integer; const AData: Pointer): TUInt;
 var Texture: TUInt;
 begin
   Result:= FREE_LINK;

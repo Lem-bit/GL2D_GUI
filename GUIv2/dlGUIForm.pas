@@ -29,8 +29,7 @@ interface
  const HEIGHT_CAPTION = 20; //Высота заголовка
        ID_BTN_CLOSE   = 1;  //Идентификаторы кнопок в массиве
        ID_BTN_MINIM   = 2;
-       BUTTON_WIDTH   = 16; //Размеры кнопки
-       BUTTON_BORDER  = 2;  //Бордер кнопки
+       BUTTON_WIDTH   = 18; //Размеры кнопки
 
  type
    //Хинт на форме
@@ -65,7 +64,7 @@ interface
        FText    : String; //Название окна
        FButton  : array[1..2] of TGUIButton;
      private
-       procedure MakeButton(pButtonIndex: integer; pCaption: String; pProc: TGUIProc);
+       procedure MakeButton(var pButton: TGUIButton; pProc: TGUIProc; pImage, pImageDown: Integer);
        procedure CalculateButtonPos;
        procedure HideWindow(Sender: TObject; ParamObj: Pointer = nil);
        procedure MinimizeWindow(Sender: TObject; ParamObj: Pointer = nil);
@@ -73,7 +72,7 @@ interface
        procedure SetResize; override;
        procedure SetMoveMousePos(pX, pY: Integer);
      public
-       constructor Create(pName, pCaption: String; pX, pY, pWidth, pHeight: TInt; pTextureLink: TTextureLink = nil; pTextureFont: TTextureLink = nil;
+       constructor Create(pName, pCaption: String; pX, pY, pWidth, pHeight: Integer; pTextureLink: TTextureLink = nil; pTextureFont: TTextureLink = nil;
           pBorderIcons: TGUIBorderIcons = fbiAll);
        procedure OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton); override;
        procedure OnMouseUp(pX, pY: Integer; Button: TGUIMouseButton); override;
@@ -91,7 +90,7 @@ interface
        FMinimized   : Boolean;
        FHitCaption  : Boolean; //OnHit сработал у Caption или у Form
      private
-       FCurrID      : TInt; //Текущий индекс компонента, номер последнего добавленного
+       FCurrID      : Integer; //Текущий индекс компонента, номер последнего добавленного
        FActivePopup : TGUIPopupMenu; //Текущее активное меню
        FFocusComp   : TGUIObject; //Компонент в фокусе
      private
@@ -105,7 +104,7 @@ interface
      protected
        procedure SetResize; override;
      public
-       constructor Create(pName, pCaption: String; pX, pY, pWidth, pHeight: TInt; pTextureLink: TTextureLink = nil; pTextureFont: TTextureLink = nil; pFormStyle: TGUIFormStyle = fglNormal;
+       constructor Create(pName, pCaption: String; pX, pY, pWidth, pHeight: Integer; pTextureLink: TTextureLink = nil; pTextureFont: TTextureLink = nil; pFormStyle: TGUIFormStyle = fglNormal;
          pBorderIcons: TGUIBorderIcons = fbiAll);
 
        function IsExists(pIndex: integer): Boolean;
@@ -120,8 +119,8 @@ interface
        procedure OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton); override;
        procedure OnMouseUp(pX, pY: Integer; Button: TGUIMouseButton); override;
        procedure OnMouseMove(pX, pY: Integer); override;
-       procedure OnMouseWheelUp(Shift: TShiftState; MPosX, MPosY: TInt); override;
-       procedure OnMouseWheelDown(Shift: TShiftState; MPosX, MPosY: TInt); override;
+       procedure OnMouseWheelUp(Shift: TShiftState; MPosX, MPosY: Integer); override;
+       procedure OnMouseWheelDown(Shift: TShiftState; MPosX, MPosY: Integer); override;
        procedure OnKeyDown(var Key: Word; Shift: TShiftState); override;
        procedure OnKeyUp(var Key: Word; Shift: TShiftState); override;
        procedure OnKeyPress(Key: Char); override;
@@ -171,17 +170,17 @@ procedure TGUIFormCaption.CalculateButtonPos;
 var FID : integer;
     Left: Integer;
 begin
-  Left:= 0;
+  Left:= 2;
   for FID := Low(FButton) to High(FButton) do
    if Assigned(FButton[FID]) then
    begin
-     Left:= Left + BUTTON_BORDER + FButton[FID].Width;
+     Left:= Left + FButton[FID].Width;
      FButton[FID].X:= Rect.X + Rect.Width - Left;
-     FButton[FID].Y:= Rect.Y + BUTTON_BORDER;
+     FButton[FID].Y:= Rect.Y + 1;
    end;
 end;
 
-constructor TGUIFormCaption.Create(pName, pCaption: String; pX, pY, pWidth, pHeight: TInt; pTextureLink: TTextureLink = nil; pTextureFont: TTextureLink = nil;
+constructor TGUIFormCaption.Create(pName, pCaption: String; pX, pY, pWidth, pHeight: Integer; pTextureLink: TTextureLink = nil; pTextureFont: TTextureLink = nil;
   pBorderIcons: TGUIBorderIcons = fbiAll);
 begin
   inherited Create(pName);
@@ -189,30 +188,31 @@ begin
   FDrag       := False;
   FLastPosX   := 0;
   FLastPosY   := 0;
+  Color       := clWhite;
+  FText       := pCaption;
+
   SetRect(pX, pY, pWidth, pHeight);
-  FText := pCaption;
   SetTextureLink(pTextureLink);
   FFont.SetTextureLink(pTextureFont);
-  Color:= clWhite;
   FTextOffset.SetRect(2, 2, 0, 0);
 
   //Создаем кнопки
   if (fbiAll in [pBorderIcons])   or
      (fbiClose in [pBorderIcons]) then
-     MakeButton(ID_BTN_CLOSE, 'x', HideWindow);
+     MakeButton(FButton[ID_BTN_CLOSE], HideWindow, pal_BtnCloseUp, pal_BtnCloseDn);
 
   if (fbiAll in [pBorderIcons])       or
      (fbiMinimized in [pBorderIcons]) then
-     MakeButton(ID_BTN_MINIM, '-', MinimizeWindow);
+     MakeButton(FButton[ID_BTN_MINIM], MinimizeWindow, pal_BtnMinimizeUp, pal_BtnMinimizeDn);
 
   //Пересчитываем позицию кнопки
   CalculateButtonPos;
 
   VertexList.MakeSquare(0, 0, Rect.Width, Rect.Height,
-     clWhite, clWhite, clGray, clGray, GUIPalette.GetCellRect(5));
+     clWhite, clWhite, clGray, clGray, GUIPalette.GetCellRect(pal_Frame));
 
-  VertexList.MakeSquare(1, 1, Rect.Width - 2, Rect.Height - 2,
-     clSilver, clWhite, clWhite, clSilver, GUIPalette.GetCellRect(4));
+  VertexList.MakeSquareOffset(0, 1,
+     clGray, clWhite, clWhite, clGray, GUIPalette.GetCellRect(pal_Window));
 end;
 
 procedure TGUIFormCaption.HideWindow(Sender: TObject; ParamObj: Pointer = nil);
@@ -221,16 +221,15 @@ begin
   Parent.Hide:= True;
 end;
 
-procedure TGUIFormCaption.MakeButton(pButtonIndex: integer; pCaption: String; pProc: TGUIProc);
+procedure TGUIFormCaption.MakeButton(var pButton: TGUIButton; pProc: TGUIProc; pImage, pImageDown: Integer);
 begin
-  if (pButtonIndex < Low(FButton)) or (pButtonIndex > High(FButton)) then
-    Exit;
-
-  FButton[pButtonIndex]        := TGUIButton.Create('', pCaption, Rect.Width - BUTTON_WIDTH, Rect.Y + BUTTON_BORDER, Self.GetTextureLink);
-  FButton[pButtonIndex].Font   := Self.FFont;
-  FButton[pButtonIndex].Width  := BUTTON_WIDTH;
-  FButton[pButtonIndex].Height := BUTTON_WIDTH;
-  FButton[pButtonIndex].OnClick:= pProc;
+  pButton:= TGUIButton.Create('', '', 0, 0, Self.GetTextureLink);
+  pButton.Rect.SetSize(BUTTON_WIDTH, BUTTON_WIDTH);
+  pButton.Area.Show:= False;
+  pButton.OnResize;
+  pButton.OnClick:= pProc;
+  pButton.VertexList.SetVertexTextureMap( 4, GUIPalette.GetCellRect(pImage));
+  pButton.VertexList.SetVertexTextureMap(12, GUIPalette.GetCellRect(pImageDown));
 end;
 
 procedure TGUIFormCaption.MinimizeWindow(Sender: TObject; ParamObj: Pointer = nil);
@@ -307,8 +306,7 @@ begin
   //Отправим сообщения OnMouseUp на наши кнопки
   for FID := Low(FButton) to High(FButton) do
     if Assigned(FButton[FID]) then
-      if FButton[FID].OnHit(pX, pY) then
-        FButton[FID].OnMouseUp(pX, pY, Button);
+       FButton[FID].OnMouseUp(pX, pY, Button);
 end;
 
 procedure TGUIFormCaption.Render;
@@ -350,7 +348,7 @@ end;
 
 { TGUIForm }
 
-constructor TGUIForm.Create(pName, pCaption: String; pX, pY, pWidth, pHeight: TInt; pTextureLink: TTextureLink = nil; pTextureFont: TTextureLink = nil;
+constructor TGUIForm.Create(pName, pCaption: String; pX, pY, pWidth, pHeight: Integer; pTextureLink: TTextureLink = nil; pTextureFont: TTextureLink = nil;
   pFormStyle: TGUIFormStyle = fglNormal; pBorderIcons: TGUIBorderIcons = fbiAll);
 begin
   inherited Create(pName, gtcForm);
@@ -377,12 +375,10 @@ begin
   SetTextureLink(pTextureLink);
   FFont.SetTextureLink(pTextureFont);
 
+  //Рамка
+  VertexList.MakeSquare(0, 0, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_Frame));
   //Основная часть
-  VertexList.MakeSquare(0, 0, Rect.Width, Rect.Height,
-     clWhite, clWhite, clWhite, clWhite, GUIPalette.GetCellRect(6));
-
-  VertexList.MakeSquare(1, 0, Rect.Width - 2, Rect.Height - 1,
-     clWhite, clWhite, clWhite, clWhite, GUIPalette.GetCellRect(4));
+  VertexList.MakeSquareOffset(0, 1, Color, GUIPalette.GetCellRect(pal_Window));
 end;
 
 procedure TGUIForm.SetResize;
@@ -802,7 +798,7 @@ begin
      FActivePopup.OnMouseUp(pX - Rect.X, pY - Rect.Y, Button);
 end;
 
-procedure TGUIForm.OnMouseWheelDown(Shift: TShiftState; MPosX, MPosY: TInt);
+procedure TGUIForm.OnMouseWheelDown(Shift: TShiftState; MPosX, MPosY: Integer);
 var FID: Integer;
 begin
   if Hide then Exit;
@@ -811,7 +807,7 @@ begin
     TGUIObject(FComponent.Items[FID]).OnMouseWheelDown(Shift, MPosX - Rect.X, MPosY - Rect.Y);
 end;
 
-procedure TGUIForm.OnMouseWheelUp(Shift: TShiftState; MPosX, MPosY: TInt);
+procedure TGUIForm.OnMouseWheelUp(Shift: TShiftState; MPosX, MPosY: Integer);
 var FID: Integer;
 begin
   if Hide then Exit;
