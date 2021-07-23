@@ -12,7 +12,6 @@ uses RTTI, Classes, Graphics, SysUtils, dlOpenGL, dlGUITypes, dlGUITypesRTTI, dl
   = Email : gui_proj@mail.ru                         =
   = Site  : lemgl.ru                                 =
   =                                                  =
-  = Собрано на Delphi 10.3 community                 =
   ====================================================
 }
 
@@ -25,6 +24,7 @@ uses RTTI, Classes, Graphics, SysUtils, dlOpenGL, dlGUITypes, dlGUITypesRTTI, dl
    TGUITypeDefName = record
      Name: String; //Название компонента по умолчанию
    end;
+
    TGUITypeComponent = (gtcObject, gtcForm, gtcButton, gtcPopupMenu, gtcCheckBox, gtcLabel, gtcImage, gtcProgressBar,
      gtcEditBox, gtcTrackBar, gtcListBox, gtcRadioButton, gtcBevel, gtcComboBox, gtcPanel, gtcTable);
 
@@ -328,12 +328,12 @@ end;
 destructor TGUIObject.Destroy;
 begin
   FreeAndNil(FVertexList);
-//  FreeAndNil(FTextureLink); не нужно
   FreeAndNil(FFont);
   FreeAndNil(FBlend);
   FreeAndNil(FColor);
   FreeAndNil(FHint);
   FreeAndNil(FArea);
+//  FreeAndNil(FTextureLink); не нужно
 end;
 
 procedure TGUIObject.SendGUIMessage(pMessage: TGUIMessage);

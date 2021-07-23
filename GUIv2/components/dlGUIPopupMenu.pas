@@ -12,7 +12,6 @@ uses Classes, dlOpenGL, SysUtils, Graphics, dlGUIFont, dlGUITypes, dlGUITypesRTT
   = Email : gui_proj@mail.ru                         =
   = Site  : lemgl.ru                                 =
   =                                                  =
-  = Собрано на Delphi 10.3 community                 =
   ====================================================
 }
 

@@ -12,7 +12,6 @@ uses SysUtils, Classes, Graphics, dlGUITypes, dlGUIObject, dlGUIPaletteHelper, d
   = Email : gui_proj@mail.ru                         =
   = Site  : lemgl.ru                                 =
   =                                                  =
-  = Собрано на Delphi 10.3 community                 =
   ====================================================
 }
 
@@ -64,6 +63,7 @@ type
     OnMaxValue: TGUIProc; //Максимальное значение
   public
     constructor Create(pLeft, pTop, pWidth, pHeight: Integer; pTrackerStyle: TGUITrackerStyle; pTextureLink: TTextureLink = nil);
+    destructor Destroy; override;
     procedure SetTextureLink(pTextureLink: TTextureLink); override;
 
     function GetTrackerValue: Integer; //Текущий элемент
@@ -364,6 +364,16 @@ begin
   VertexList.MakeSquare(0, 0, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_Window));
 end;
 
+destructor TGUITracker.Destroy;
+var i: integer;
+begin
+  for i := low(FButton) to High(FButton) do
+    if Assigned(FButton[i]) then
+      FButton[i].Free;
+
+  inherited;
+end;
+
 function TGUITracker.GetObjPosX(pObjIndex: integer): Integer;
 begin
   Result:= 0;
@@ -485,8 +495,8 @@ begin
   //Установим максимальное значение
   FMaxValue:= pValue;
 
-  if FMaxValue < 1 then
-    FMaxValue:= 1;
+  if FMaxValue < 0 then
+    FMaxValue:= 0;
 
   if FCurrValue > FMaxValue then
     FCurrValue:= FMaxValue;

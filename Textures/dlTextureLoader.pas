@@ -2,7 +2,7 @@
 
 interface
 
-uses Windows, JPEG, SysUtils, Classes, Graphics, dlGUITypes, dlOpenGL;
+uses Windows, JPEG, SysUtils, Classes, Graphics, Vcl.Imaging.pngimage, dlGUITypes, dlOpenGL;
 
 type
   TGAHeader = packed record   // Header type for TGA images
@@ -26,7 +26,7 @@ type
 
 type
   //Тип файла загрузки
-  TTextureFileType = (F_UNKNOWN, F_BMP, F_JPG, F_TGA);
+  TTextureFileType = (F_UNKNOWN, F_BMP, F_JPG, F_TGA, F_PNG);
 
   //Пустая текстура
   const FREE_LINK = 0;
@@ -63,15 +63,20 @@ type
     private
       function CreateTexture(const AWidth, AHeight: Integer; const AData: Pointer): TUInt;
 
-      function LoadBMPFromFile(const AFileName: String; out InfoHeader: BITMAPINFOHEADER): Pointer;
-      function LoadBMPFromRes(const AName: String; out InfoHeader: BITMAPINFOHEADER): Pointer;
+      procedure LoadPNG8to24bit(var png: TPngImage);
+      function LoadPNGFromRes(const AName: String; out AInfoHeader: BITMAPINFOHEADER): Pointer;
+      function LoadPNGFromFile(const AFileName: String; out AInfoHeader: BITMAPINFOHEADER): Pointer;
+      function LoadPNG(const AFileName: String): TTextureInfo;
+
+      function LoadBMPFromFile(const AFileName: String; out AInfoHeader: BITMAPINFOHEADER): Pointer;
+      function LoadBMPFromRes(const AName: String; out AInfoHeader: BITMAPINFOHEADER): Pointer;
       function LoadBMP (const AFileName: String): TTextureInfo;
 
       function LoadJPGFromRes(const AName: String; var JPG: TJPEGImage): Boolean;
       function LoadJPG(const AFileName: String): TTextureInfo;
 
-      function LoadTGAFromFile(const AFileName: String; out InfoHeader: TGAHeader): Pointer;
-      function LoadTGAFromRes(const AName: String; out InfoHeader: TGAHeader): Pointer;
+      function LoadTGAFromFile(const AFileName: String; out AInfoHeader: TGAHeader): Pointer;
+      function LoadTGAFromRes(const AName: String; out AInfoHeader: TGAHeader): Pointer;
       function LoadTGA (const AFileName: String): TTextureInfo;
     private
       //Определить тип загружаемого файла
@@ -115,7 +120,9 @@ begin
   else if SameText(Buf, '.jpg') or SameText(Buf, '.jpeg') then
     Result:= F_JPG
   else if SameText(Buf, '.tga') then
-    Result:= F_TGA;
+    Result:= F_TGA
+  else if SameText(Buf, '.png') then
+    Result:= F_PNG;
 end;
 
 constructor TTextureLoader.Create;
@@ -161,6 +168,8 @@ begin
 
      Result:= Texture;
   except
+    on e: Exception do
+     FErrors.SetError(True, e.Message);
   end;
 end;
 
@@ -172,12 +181,14 @@ end;
 
 function TTextureLoader.LoadFromFile(const AFileName: String; var ATextureLink: TTextureLink): Boolean;
 begin
+  FErrors.SetError(False, '');
   FLoadFromResource:= False;
   Result:= LoadTexture(AFileName, ATextureLink);
 end;
 
 function TTextureLoader.LoadFromResource(const AFileName: String; var ATextureLink: TTextureLink): Boolean;
 begin
+  FErrors.SetError(False, '');
   FLoadFromResource:= True;
   Result:= LoadFromFile(AFileName, ATextureLink);
 end;
@@ -284,7 +295,7 @@ begin
 
     Result.Width := InfoHeader.biWidth;
     Result.Height:= InfoHeader.biHeight;
-    Result.Load  := True;
+    Result.Load  := not FErrors.Exists;
 
   finally
     ADataRGB := nil;
@@ -296,7 +307,7 @@ begin
 
 end;
 
-function TTextureLoader.LoadBMPFromFile(const AFileName: String; out InfoHeader: BITMAPINFOHEADER): Pointer;
+function TTextureLoader.LoadBMPFromFile(const AFileName: String; out AInfoHeader: BITMAPINFOHEADER): Pointer;
 var BitmapFile   : THandle;
     FileHeader   : BITMAPFILEHEADER;
     ReadBytes    : LongWord;
@@ -319,10 +330,10 @@ begin
     try
       // Get header information
       ReadFile(BitmapFile, FileHeader, SizeOf(FileHeader), ReadBytes, nil);
-      ReadFile(BitmapFile, InfoHeader, SizeOf(InfoHeader), ReadBytes, nil);
+      ReadFile(BitmapFile, AInfoHeader, SizeOf(AInfoHeader), ReadBytes, nil);
 
       // Get palette
-      PaletteLength := InfoHeader.biClrUsed;
+      PaletteLength := AInfoHeader.biClrUsed;
       SetLength(Palette, PaletteLength);
       ReadFile(BitmapFile, Palette, PaletteLength, ReadBytes, nil);
 
@@ -332,9 +343,9 @@ begin
         Exit;
       end;
 
-      BitmapLength := InfoHeader.biSizeImage;
+      BitmapLength := AInfoHeader.biSizeImage;
       if BitmapLength = 0 then
-        BitmapLength := InfoHeader.biWidth * InfoHeader.biHeight * InfoHeader.biBitCount Div 8;
+        BitmapLength := AInfoHeader.biWidth * AInfoHeader.biHeight * AInfoHeader.biBitCount Div 8;
 
       // Get the actual pixel data
       GetMem(Result, BitmapLength);
@@ -358,7 +369,7 @@ begin
   end;
 end;
 
-function TTextureLoader.LoadBMPFromRes(const AName: String; out InfoHeader: BITMAPINFOHEADER): Pointer;
+function TTextureLoader.LoadBMPFromRes(const AName: String; out AInfoHeader: BITMAPINFOHEADER): Pointer;
 var ResHandle    : THandle;
     MemHandle    : THandle;
     ResPtr       : PByte;
@@ -384,21 +395,21 @@ begin
       MemHandle := LoadResource(hInstance, ResHandle);
       ResPtr    := LockResource(MemHandle);
       MemStream := TMemoryStream.Create;
-      ResSize := SizeOfResource(hInstance, ResHandle);
+      ResSize   := SizeOfResource(hInstance, ResHandle);
       MemStream.SetSize(ResSize);
       MemStream.Write(ResPtr^, ResSize);
       FreeResource(MemHandle);
       MemStream.Seek(0, 0);
 
       MemStream.ReadBuffer(FileHeader, SizeOf(FileHeader));  // FileHeader
-      MemStream.ReadBuffer(InfoHeader, SizeOf(InfoHeader));  // InfoHeader
-      PaletteLength := InfoHeader.biClrUsed;
+      MemStream.ReadBuffer(AInfoHeader, SizeOf(AInfoHeader));  // InfoHeader
+      PaletteLength := AInfoHeader.biClrUsed;
       SetLength(Palette, PaletteLength);
       MemStream.ReadBuffer(Palette, PaletteLength); // Palette
 
-      BitmapLength := InfoHeader.biSizeImage;
+      BitmapLength := AInfoHeader.biSizeImage;
       if BitmapLength = 0 then
-        BitmapLength := InfoHeader.biWidth * InfoHeader.biHeight * InfoHeader.biBitCount Div 8;
+        BitmapLength := AInfoHeader.biWidth * AInfoHeader.biHeight * AInfoHeader.biBitCount Div 8;
 
       GetMem(Result, BitmapLength);
       MemStream.ReadBuffer(Result^, BitmapLength); // Bitmap Data
@@ -475,7 +486,7 @@ begin
     Result.Width := BMP.Width;
     Result.Height:= BMP.Height;
     Result.Link  := CreateTexture(BMP.Width, BMP.Height, Data);
-    Result.Load  := True;
+    Result.Load  := not FErrors.Exists;
 
   finally
     FreeAndNil(BMP);
@@ -529,6 +540,175 @@ begin
   end;
 end;
 
+function TTextureLoader.LoadPNG(const AFileName: String): TTextureInfo;
+var Data      : Pointer;
+    InfoHeader: BITMAPINFOHEADER;
+begin
+  Result.Free;
+  Data:= nil;
+
+  try
+    //Загрузка данных
+    if FLoadFromResource then
+      //С ресурсов
+      Data:= LoadPNGFromRes(AFileName, InfoHeader)
+    else
+      //Из файла
+      Data:= LoadPNGFromFile(AFileName, InfoHeader);
+
+    if Data = nil then
+    begin
+      Errors.SetError(True, Format('При загрузке файла "%s" возникли ошибки.', [AFileName]));
+      Exit;
+    end;
+
+    Result.Width := InfoHeader.biWidth;
+    Result.Height:= InfoHeader.biHeight;
+    Result.Link  := CreateTexture(Result.Width, Result.Height, Data);
+    Result.Load  := not FErrors.Exists;
+
+  finally
+    if Data <> nil then
+     FreeMem(Data);
+  end;
+end;
+
+procedure TTextureLoader.LoadPNG8to24bit(var png: TPngImage);
+var buf : TPngImage;
+    TRns: TChunktRNS;
+    PLte: TChunkPLTE;
+    src, alpha: pByteArray;
+    dst : pRGBLine;
+    x,y : integer;
+begin
+  try
+    try
+      TRns:= png.Chunks.ItemFromClass(TChunktRNS) as TChunktRNS;
+      PLte:= png.Chunks.ItemFromClass(TChunkPLTE) as TChunkPLTE;
+
+      if not Assigned(TRns) or
+         not Assigned(PLte) then
+         exit;
+
+      buf:= TPngImage.CreateBlank(COLOR_RGBALPHA, 8, png.Width, png.Height);
+
+      for y:= 0 to png.Height - 1 do
+      begin
+        src  := png.Scanline[y];
+        dst  := buf.Scanline[y];
+        alpha:= buf.AlphaScanline[y];
+
+        for x:= 0 to png.Width - 1 do
+        begin
+          dst[x].rgbtBlue := PLte.Item[src[x]].rgbBlue;
+          dst[x].rgbtGreen:= PLte.Item[src[x]].rgbGreen;
+          dst[x].rgbtRed  := PLte.Item[src[x]].rgbRed;
+          alpha[x]        := TRns.PaletteValues[src[x]];
+        end;
+      end;
+
+      png.Assign(buf);
+    except
+      on e: Exception do
+        FErrors.SetError(True, 'LoadPNG8to24bit ошибка при конвертировании: ' + e.Message);
+    end;
+
+  finally
+    FreeAndNil(buf);
+  end;
+end;
+
+function TTextureLoader.LoadPNGFromFile(const AFileName: String; out AInfoHeader: BITMAPINFOHEADER): Pointer;
+var Data : array of byte;
+    W, il: Integer;
+    H    : Integer;
+    Png  : TPngImage;
+    pb   : PByteArray;
+begin
+
+  try
+    png := TPngImage.Create;
+    png.LoadFromFile(AFileName);
+
+    AInfoHeader.biWidth := png.Width;
+    AInfoHeader.biHeight:= png.Height;
+
+    if png.Palette <> 0 then
+      LoadPNG8to24bit(png);
+
+    SetLength(Data, Png.Width * Png.Height * 4);
+
+    il:=0;
+    for H:= Png.Height - 1 downto 0 do
+    begin
+     pb:= png.Scanline[H];
+
+      for W:= 0 to Png.Width - 1 do
+      begin
+        Data[il]   := pb[W * 3 + 2];
+        Data[il+1] := pb[W * 3 + 1];
+        Data[il+2] := pb[W * 3];
+        if (png.AlphaScanline[H] = nil) then
+          Data[il + 3]:= 0
+        else
+          Data[il + 3]:= png.AlphaScanline[H][W];
+
+        inc(il, 4);
+      end;
+    end;
+
+    GetMem(Result, Length(Data));
+    CopyMemory(Result, @Data[0], Length(Data));
+
+  finally
+    Data:= nil;
+    FreeAndNil(png);
+  end;
+end;
+
+function TTextureLoader.LoadPNGFromRes(const AName: String; out AInfoHeader: BITMAPINFOHEADER): Pointer;
+var Data : array of byte;
+    W, il: Integer;
+    H    : Integer;
+    Png  : TPngImage;
+    pb   : PByteArray;
+begin
+
+  try
+    png := TPngImage.Create;
+    png.LoadFromResourceName(hInstance, AName);
+
+    AInfoHeader.biWidth := png.Width;
+    AInfoHeader.biHeight:= png.Height;
+
+    if png.Palette <> 0 then
+      LoadPNG8to24bit(png);
+
+    SetLength(Data, Png.Width * Png.Height * 4);
+
+    il:=0;
+    for H:= 0 to png.Height - 1 do
+    begin
+     pb:= png.Scanline[H];
+
+      for W:= 0 to png.Width - 1 do
+      begin
+        Data[il]   := pb[W * 3 + 2];
+        Data[il+1] := pb[W * 3 + 1];
+        Data[il+2] := pb[W * 3];
+        Data[il+3] := png.AlphaScanline[H][W];
+        inc(il, 4);
+      end;
+    end;
+
+    GetMem(Result, Length(Data));
+    CopyMemory(Result, @Data[0], Length(Data));
+
+  finally
+    FreeAndNil(png);
+  end;
+end;
+
 function TTextureLoader.LoadTexture(const AFileName: String; var ATextureLink: TTextureLink): Boolean;
 var TextureInfo: TTextureInfo;
 begin
@@ -550,6 +730,7 @@ begin
       F_BMP: TextureInfo:= LoadBMP(AFileName);
       F_JPG: TextureInfo:= LoadJPG(AFileName);
       F_TGA: TextureInfo:= LoadTGA(AFileName);
+      F_PNG: TextureInfo:= LoadPNG(AFileName);
     end;
 
     if not TextureInfo.Load then
@@ -600,7 +781,7 @@ begin
     Result.Width := InfoHeader.Width[0]  + InfoHeader.Width[1]  * 256;
     Result.Height:= InfoHeader.Height[0] + InfoHeader.Height[1] * 256;
     Result.Link  := CreateTexture(Result.Width, Result.Height, Data);
-    Result.Load  := True;
+    Result.Load  := not FErrors.Exists;
 
   finally
     if Data <> nil then
@@ -645,7 +826,7 @@ begin
   FreeMem(Image); *)
 end;
 
-function TTextureLoader.LoadTGAFromFile(const AFileName: String; out InfoHeader: TGAHeader): Pointer;
+function TTextureLoader.LoadTGAFromFile(const AFileName: String; out AInfoHeader: TGAHeader): Pointer;
 var TGAFile  : THandle;
     ReadBytes: LongWord;
     ImageSize: LongWord;
@@ -672,26 +853,26 @@ begin
 
     try
       // Get header information
-      ReadFile(TGAFile, InfoHeader, SizeOf(InfoHeader), ReadBytes, nil);
+      ReadFile(TGAFile, AInfoHeader, SizeOf(AInfoHeader), ReadBytes, nil);
 
-      Width     := InfoHeader.Width[0]  + InfoHeader.Width[1]  * 256;
-      Height    := InfoHeader.Height[0] + InfoHeader.Height[1] * 256;
-      ImageSize := Width * Height * (InfoHeader.BPP div 8);
+      Width     := AInfoHeader.Width[0]  + AInfoHeader.Width[1]  * 256;
+      Height    := AInfoHeader.Height[0] + AInfoHeader.Height[1] * 256;
+      ImageSize := Width * Height * (AInfoHeader.BPP div 8);
 
-      if (InfoHeader.ImageType <> 2) then  { TGA_RGB }
+      if (AInfoHeader.ImageType <> 2) then  { TGA_RGB }
       begin
         Errors.SetError(True, 'Поддерживаются только несжатые изображения ');
         Exit;
       end;
 
       // Don't support colormapped files
-      if InfoHeader.ColorMapType <> 0 then
+      if AInfoHeader.ColorMapType <> 0 then
       begin
         Errors.SetError(True, 'Не поддерживаются файлы с цветовым отображением');
         Exit;
       end;
 
-      if InfoHeader.BPP < 24 then
+      if AInfoHeader.BPP < 24 then
       begin
         Errors.SetError(True, 'Не поддерживаются файлы с цветом меньше 24 бит');
         Exit;
@@ -717,7 +898,7 @@ begin
 
 end;
 
-function TTextureLoader.LoadTGAFromRes(const AName: String; out InfoHeader: TGAHeader): Pointer;
+function TTextureLoader.LoadTGAFromRes(const AName: String; out AInfoHeader: TGAHeader): Pointer;
 var ResStream: TResourceStream;
     ImageSize: LongWord;
     Width    : Integer;
@@ -729,27 +910,27 @@ begin
     ResStream := TResourceStream.Create(hInstance, PChar(copy(AName, 1, Pos('.', AName) -1)), 'TGA');
 
     try
-      ResStream.ReadBuffer(InfoHeader, SizeOf(TGAHeader));  // FileHeader
+      ResStream.ReadBuffer(AInfoHeader, SizeOf(TGAHeader));  // FileHeader
 
       // Get the width, height, and color depth
-      Width     := InfoHeader.Width[0]  + InfoHeader.Width[1]  * 256;
-      Height    := InfoHeader.Height[0] + InfoHeader.Height[1] * 256;
-      ImageSize := Width * Height * (InfoHeader.BPP div 8);
+      Width     := AInfoHeader.Width[0]  + AInfoHeader.Width[1]  * 256;
+      Height    := AInfoHeader.Height[0] + AInfoHeader.Height[1] * 256;
+      ImageSize := Width * Height * (AInfoHeader.BPP div 8);
 
-      if (InfoHeader.ImageType <> 2) then  { TGA_RGB }
+      if (AInfoHeader.ImageType <> 2) then  { TGA_RGB }
       begin
         Errors.SetError(True, 'Поддерживаются только несжатые изображения ');
         Exit;
       end;
 
       // Don't support colormapped files
-      if InfoHeader.ColorMapType <> 0 then
+      if AInfoHeader.ColorMapType <> 0 then
       begin
         Errors.SetError(True, 'Не поддерживаются файлы с цветовым отображением');
         Exit;
       end;
 
-      if InfoHeader.BPP < 24 then
+      if AInfoHeader.BPP < 24 then
       begin
         Errors.SetError(True, 'Не поддерживаются файлы с цветом меньше 24 бит');
         Exit;

@@ -12,7 +12,6 @@ uses SysUtils, Classes, ActiveX, XMLIntf, XMLDoc, ComObj, dlGUIFormList, dlGUITy
   = Email : gui_proj@mail.ru                         =
   = Site  : lemgl.ru                                 =
   =                                                  =
-  = Собрано на Delphi 10.3 community                 =
   ====================================================
 }
 

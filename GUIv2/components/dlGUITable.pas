@@ -2,7 +2,21 @@
 
 interface
 
-uses SysUtils, Classes, Graphics, dlGUITypes, dlGUIObject, dlGUITracker, dlGUIPaletteHelper;
+uses SysUtils, Classes, Graphics, dlGUITypes, dlGUIObject, dlGUITracker, dlGUIPaletteHelper,
+  dlOpenGL,
+  dlGUIVertexController,
+  dlGUIFont;
+
+{
+  ====================================================
+  = Delphi OpenGL GUIv2                              =
+  =                                                  =
+  = Author: Ansperi L.L., 2021                       =
+  = Email : gui_proj@mail.ru                         =
+  = Site  : lemgl.ru                                 =
+  =                                                  =
+  ====================================================
+}
 
 type
   TGUITable = class;
@@ -47,18 +61,22 @@ type
   end;
 
   TGUITableCol    = class(TGUITableCell)
+    public
       constructor Create;
   end;
 
   TGUITableHeader = class(TGUITableCell)
+    public
       constructor Create;
   end;
 
-
-  //Ячейка записи
+  //Строка записи
   TGUITableItem = class(TGUITableCellList)
+    strict private
+      FHeight: Integer; //Высота строки
     private
       function GetCellItem(value: integer): TGUITableCol;
+      procedure SetHeight(value: integer);
     public
       procedure Add(const AText: String); overload;
       procedure Add(const AText: array of String); overload;
@@ -68,13 +86,14 @@ type
       procedure OnMouseUp(pX, pY: Integer; Button: TGUIMouseButton);
     public
       property Col[index: integer]: TGUITableCol read GetCellItem;
+      property Height: integer read FHeight write SetHeight;
   end;
 
   //Список элементов таблицы
   TGUITableRows = class
     private
-      FTable: TGUITable;
-      FItem : TList;
+      FTable : TGUITable;
+      FItem  : TList;
     strict private
       function GetOwnerTable: TGUITable;
     protected
@@ -124,28 +143,34 @@ type
       FRow : Integer; //Столбец
       FCol : Integer; //Ячейка
       FCell: TGUITableCell; //Ссылка на выбранную ячейку
+    strict private
+      FBlend: TBlendParam; //Параметры прозрачности элемента
+      FColor: TGLColor;    //Цвет выбранной ячейки
     private
       procedure Clear;
       function IsSelected: Boolean;
+      procedure Render(const ARect: TGUIObjectRect);
     public
       constructor Create;
+      destructor Destroy; override;
     public
       property Row : Integer       read FRow   write FRow;
       property Col : Integer       read FCol   write FCol;
       property Cell: TGUITableCell read FCell  write FCell;
+    public
+      property Blend: TBlendParam  read FBlend write FBlend;
+      property Color: TGLColor     read FColor write FColor;
   end;
 
   //Свойства и настройки
   TGUITableProperties = class
     strict private
-      FSelectedColor: TColor;  //Цвет выбранного элемента
       FEnableSelect : Boolean; //Разрешить выбор элемента
       FSelectRow    : Boolean; //Выбирать всю строку
     public
       constructor Create;
       destructor Destroy; override;
     public
-      property SelectedColor: TColor  read FSelectedColor write FSelectedColor;
       property EnableSelect : Boolean read FEnableSelect  write FEnableSelect;
       property SelectRow    : Boolean read FSelectRow     write FSelectRow;
   end;
@@ -154,6 +179,7 @@ type
     private
       F_ROW_MAX_WIDTH: Integer; //Макс ширина RowSelect
       F_MAX_ITEMS_Y  : Integer; //Макс кол-во элементов по Y
+      F_MAX_ITEMS_X  : Integer; //Макс кол-во элементов по X
     private
       FHeaders   : TGUITableHeaders;
       FItems     : TGUITableRows;
@@ -185,6 +211,7 @@ type
     public
       OnSelectCell  : TGUIProc; //Выбрали ячейку
       OnUnSelectCell: TGUIProc; //Нажали в пустую область и выбор отменился
+      OnRender      : TGUIProc;
     public
       property Properties: TGUITableProperties read FProperties;
       property Selected  : TGUITableSelected   read FSelected;
@@ -201,6 +228,8 @@ begin
   inherited Create(pName, gtcTable, pX, pY, 200, 200, pTextureLink);
 
   F_ROW_MAX_WIDTH:= 0;
+  F_MAX_ITEMS_X  := 0;
+  F_MAX_ITEMS_Y  := 0;
 
   HTracker.OnMove:= OnMoveTracker;
   VTracker.OnMove:= OnMoveTracker;
@@ -278,12 +307,18 @@ var i, j: integer;
 begin
   inherited;
 
+  if Assigned(OnRender) then
+    OnRender(Self, nil);
+
+  //Размеры обновились, пересчитаем
   if goaUpdateSize in GetAction then
     UpdateSize;
 
-  RowRect.SetRect(Rect.X, Rect.Y, F_ROW_MAX_WIDTH, Headers.Height);
+  //Предустановки на выбранную ячейку
+  RowRect.SetRect(Rect.X, Rect.Y, F_ROW_MAX_WIDTH, 0);
   currWidth := 0;
 
+  //
   for i := FOffsetX to Headers.Count - 1 do
   begin
 
@@ -305,8 +340,11 @@ begin
       //Элемент меню с подэлементами
       Item:= Items.Row[j];
 
+      if not Item.IndexOf(i) then
+        Break;
+
       //Если вышли за границы останавливаем прорисовку
-      if currHeight + Rect.Y > ClientHeight then
+      if currHeight + Rect.Y + Item.Height > ClientHeight then
         Break;
 
       //Размер элемента
@@ -316,20 +354,25 @@ begin
       );
 
       if j = Selected.Row then
+      begin
         RowRect.Y:= Item.Col[i].Rect.Y;
+        RowRect.Height:= Item.Height;
+      end;
 
       //Увеличиваем высоту
-      inc(currHeight, Headers.Height);
+      inc(currHeight, Item.Height);
 
+      //Включен выбор элементов
       if Properties.EnableSelect then
       begin
-        if Item.Col[i].Selected then //Элемент выбран, подкрасим
-        begin
-          Item.Col[i].Area.Color.SetColor(Properties.SelectedColor);
-          Item.Col[i].Area.Visible:= not Properties.SelectRow;
-        end
-        else
-          Item.Col[i].Area.SetDefaultColor;
+
+        if (Item.Col[i].Selected) then
+          if (not Properties.SelectRow) then //Элемент выбран, подкрасим
+          begin
+            RowRect.SetRect(Item.col[i].Rect);
+            Item.Col[i].Area.Visible:= True;
+          end;
+
       end
       else
         Item.Col[i].Area.Visible:= False;
@@ -341,10 +384,10 @@ begin
     Headers.Item[i].Render;
   end;
 
-  if (F_ROW_MAX_WIDTH > 0) and (Properties.SelectRow) and (Selected.IsSelected) then
+  //Отобразить выбранную ячейку
+  if (F_ROW_MAX_WIDTH > 0) and (Selected.IsSelected) then
     if (Selected.Row >= FOffsetY) and (Selected.Row < FOffsetY + F_MAX_ITEMS_Y) then
-      RowRect.Render();
-
+      Selected.Render(RowRect);
 end;
 
 procedure TGUITable.SetFontEvent;
@@ -381,9 +424,22 @@ end;
 
 procedure TGUITable.UpdateSize;
 var index: integer;
-    i: integer;
+    curr : integer;
+    i    : integer;
 begin
-  F_MAX_ITEMS_Y:= (ClientHeight div Headers.Height) - 1;
+  //Пока что так, фиксированная высота для всех элементов меню
+  curr:= ClientHeight - Headers.Height;
+  F_MAX_ITEMS_Y:= 0;
+
+  for i := FOffsetY to Items.Count - 1 do
+  begin
+    dec(curr, Items.Row[i].Height);
+
+    if curr < 0 then
+      Break;
+
+    inc(F_MAX_ITEMS_Y);
+  end;
   VTracker.MaxValue:= Items.Count - F_MAX_ITEMS_Y;
 
   if Selected.IsSelected then
@@ -394,18 +450,23 @@ begin
   if not Items.IndexOf(index) then
     Exit;
 
+  //Ширина элементов
+  curr:= ClientWidth;
+  F_MAX_ITEMS_X  := Headers.Count;
   F_ROW_MAX_WIDTH:= 0;
 
   for i := FOffsetX to Headers.Count - 1 do
   begin
-    if not Headers.IndexOf(i) then
-      break;
+    dec(curr, Headers.Item[i].Width);
 
-    if F_ROW_MAX_WIDTH + Headers.Item[i].Width > ClientWidth then
+    if curr < 0 then
       break;
 
     F_ROW_MAX_WIDTH:= F_ROW_MAX_WIDTH + Headers.Item[i].Width;
+    dec(F_MAX_ITEMS_X, 1);
   end;
+
+  HTracker.MaxValue:= F_MAX_ITEMS_X;
 
   RemoveAction([goaUpdateSize]);
 end;
@@ -431,7 +492,7 @@ function TGUITableHeaders.Count: Integer;
 begin
   Result:= 0;
   if Assigned(FItem) then
-    Result:= FItem.Count - 1;
+    Result:= FItem.Count;
 end;
 
 constructor TGUITableHeaders.Create(const AOwner: TGUITable);
@@ -546,6 +607,7 @@ end;
 function TGUITableRows.Add: TGUITableItem;
 begin
   Result:= TGUITableItem.Create(FTable);
+  Result.Height:= 20; //Высота строки
   FItem.Add(Result);
 
   //Обновим макс кол-во ячеек по Y
@@ -562,8 +624,8 @@ end;
 constructor TGUITableRows.Create(const AOwner: TGUITable);
 begin
   inherited Create;
-  FTable:= AOwner;
-  FItem := TList.Create;
+  FTable := AOwner;
+  FItem  := TList.Create;
 end;
 
 procedure TGUITableRows.Delete(const AIndex: Integer);
@@ -697,7 +759,7 @@ begin
   if not Assigned(Header) then
     Exit;
 
-  Item.SetRect(0, 0, Header.Width, Table.Headers.Height);
+  Item.SetRect(0, 0, Header.Width, FHeight);
 end;
 
 procedure TGUITableItem.Add(const AText: array of String);
@@ -751,6 +813,15 @@ begin
     Col[i].OnMouseUp(pX, pY, Button);
 end;
 
+procedure TGUITableItem.SetHeight(value: integer);
+var i: integer;
+begin
+  FHeight:= value;
+
+  for i := 0 to Count - 1 do
+    Col[i].Height:= FHeight;
+end;
+
 { TGUITableSelected }
 
 procedure TGUITableSelected.Clear;
@@ -763,11 +834,28 @@ end;
 constructor TGUITableSelected.Create;
 begin
   Clear;
+  FBlend:= TBlendParam.Create;
+  FBlend.Set_One_One;
+  FColor:= TGLColor.Create($00242424);
+end;
+
+destructor TGUITableSelected.Destroy;
+begin
+  FreeAndNil(FBlend);
+  FreeAndNil(FColor);
+  inherited;
 end;
 
 function TGUITableSelected.IsSelected: Boolean;
 begin
   Result:= Assigned(Cell);
+end;
+
+procedure TGUITableSelected.Render(const ARect: TGUIObjectRect);
+begin
+  Blend.Bind;
+  Color.glColor3fx;
+  ARect.Render(-1, GL_QUADS);
 end;
 
 { TGUITableCol }
@@ -800,8 +888,8 @@ end;
 
 constructor TGUITableProperties.Create;
 begin
-  FSelectedColor:= clGreen;
   FEnableSelect := True;
+  FSelectRow    := True;
 end;
 
 destructor TGUITableProperties.Destroy;

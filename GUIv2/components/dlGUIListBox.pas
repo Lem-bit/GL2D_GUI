@@ -3,7 +3,7 @@
 interface
 
 uses SysUtils, Classes, Graphics, dlOpenGL, dlGUITypes, dlGUIObject, dlGUIPaletteHelper, dlGUIButton, dlGUIImage,
-  dlGUITracker;
+  dlGUITracker, dlGUIPopupMenu;
 
 {
   ====================================================
@@ -13,7 +13,6 @@ uses SysUtils, Classes, Graphics, dlOpenGL, dlGUITypes, dlGUIObject, dlGUIPalett
   = Email : gui_proj@mail.ru                         =
   = Site  : lemgl.ru                                 =
   =                                                  =
-  = Собрано на Delphi 10.3 community                 =
   ====================================================
 }
 
@@ -25,11 +24,14 @@ type
     FBrushColor: TColor;
     FOffsetX   : Integer;
     FOutText   : String;
+
+    FSelectedColor: TColor; //Цвет если элемент выбран
   private
     procedure SetText(pText: String);
     procedure SetBrushColor(pValue: TColor);
   protected
     procedure SetFontEvent; override;
+    procedure SetAreaResize; override;
    // procedure SetResize; override;
   public
     procedure SetTextureLink(pTextureLink: TTextureLink); override;
@@ -39,25 +41,28 @@ type
     procedure RenderText; override;
     procedure SetOffsetX(pValue: Integer);
   public
-    property BrushColor: TColor  read FBrushColor write SetBrushColor;
-    property Text      : String  read FText       write SetText;
-    property Selected  : Boolean read FSelected   write FSelected;
+    property BrushColor   : TColor  read FBrushColor    write SetBrushColor;
+    property SelectedColor: TColor  read FSelectedColor write FSelectedColor;
+    property Text         : String  read FText          write SetText;
+    property Selected     : Boolean read FSelected      write FSelected;
   end;
 
   TGUIListBox = class(TGUITrackerIntf)
   private
     const GR_MAIN = 1;  //Группа вершин
   private
-    FLineSpacing : Integer; //Межстрочный интервал
-    FBufMouse    : TMousePoint;
-    FItemHeight  : Integer;
+    FClickOnTrack : Boolean; //Нажали на трекер
 
-    FSelected    : Integer; //Выбранный элемент
-    FYOffset     : Integer; //Сдвиг по Y
-    FXOffset     : Integer; //Сдвиг по Х
-    FItem        : TList; //Список элементов
+    FLineSpacing  : Integer; //Межстрочный интервал
+    FBufMouse     : TMousePoint;
+    FItemHeight   : Integer;
 
-    FBrushColor  : TColor;
+    FSelected     : Integer; //Выбранный элемент
+    FYOffset      : Integer; //Сдвиг по Y
+    FXOffset      : Integer; //Сдвиг по Х
+    FItem         : TList;   //Список элементов
+
+    FBrushColor   : TColor;
   private
     procedure SetMaxVertTracker;
     procedure SetMaxHorizTracker;
@@ -104,9 +109,9 @@ type
     procedure LoadFromFile(const AFileName: String);
     procedure SaveToFile(const AFileName: String);
   public
-    property Selected: Integer    read FSelected;
-    property BrushColor: TColor   read FBrushColor  write FBrushColor;
-    property LineSpacing: Integer read FLineSpacing write SetLineSpacing;
+    property Selected: Integer     read FSelected;
+    property BrushColor: TColor    read FBrushColor    write FBrushColor;
+    property LineSpacing: Integer  read FLineSpacing   write SetLineSpacing;
     property Items[index: integer]: TGUIListBoxItem read GetItem;
   end;
 
@@ -246,12 +251,12 @@ constructor TGUIListBox.Create(pName: String; pX, pY: Integer; pTextureLink: TTe
 begin
   inherited Create(pName, gtcListBox, pX, pY, 200, 200, pTextureLink);
 
-  FBorder     := 2;
-  FYOffset    := 0;
-  FXOffset    := 0;
-  FLineSpacing:= 0;
-  FItem       := TList.Create;
-  FBrushColor := $00202020;
+  FBorder       := 2;
+  FYOffset      := 0;
+  FXOffset      := 0;
+  FLineSpacing  := 0;
+  FItem         := TList.Create;
+  FBrushColor   := $00202020;
 
   SetRect(pX, pY, 200, 200);
 
@@ -289,6 +294,7 @@ begin
 
   if not Assigned(Items[FSelected]) then Exit;
   if not Assigned(Items[FSelected].PopupMenu) then Exit;
+  if FClickOnTrack then Exit;
 
   Result:= Items[FSelected].PopupMenu;
 end;
@@ -306,21 +312,20 @@ end;
 
 procedure TGUIListBox.OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton);
 var i: integer;
-    OnTracker: Boolean;
 begin
   inherited;
 
   if not OnHit(pX, pY) then
     Exit;
 
-  OnTracker:= False;
+  FClickOnTrack:= False;
   for i := Low(FTracker) to High(FTracker) do
   begin
     FTracker[i].OnMouseDown(pX, pY, Button);
-    OnTracker:= FTracker[i].OnHit(pX, pY) or OnTracker;
+    FClickOnTrack:= FTracker[i].OnHit(pX, pY) or FClickOnTrack;
   end;
 
-  if (OnTracker) then
+  if (FClickOnTrack) then
     Exit;
 
   if not ItemAt(FYOffset) then
@@ -565,10 +570,11 @@ constructor TGUIListBoxItem.Create(pText: String; pTextureLink: TTextureLink);
 begin
   inherited Create;
 
-  FText    := pText;
-  FOutText := pText;
-  FSelected:= False;
-  Area.Show:= True;
+  FText         := pText;
+  FOutText      := pText;
+  FSelected     := False;
+  Area.Show     := True;
+  FSelectedColor:= $004F4F4F;
 
 {  Area.Color.SetColor($00002E5B);
   Area.Blend.Set_SrcAlpha_OneMinusSrcAlpha;
@@ -584,7 +590,7 @@ begin
   VertexList.SetVertexPosSquare(0, 0, 0, Rect.Width, Rect.Height);
 
   if FSelected then
-    Color:= $004F4F4F
+    Color:= FSelectedColor
   else
     Color:= FBrushColor;
 
@@ -598,6 +604,16 @@ begin
   inherited;
 
   Font.Text(Rect.X + FTextOffset.X, Rect.Y + FTextOffset.Y, FOutText, Rect.Width);
+end;
+
+procedure TGUIListBoxItem.SetAreaResize;
+begin
+  inherited;
+
+  if Assigned(PopupMenu) then
+    Area.Show:= PopupMenu.Hide
+  else
+    Area.Show:= True;
 end;
 
 procedure TGUIListBoxItem.SetBrushColor(pValue: TColor);

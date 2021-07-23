@@ -12,7 +12,6 @@ uses Graphics, Classes, Windows, SysUtils, dlOpenGL;
   = Email : gui_proj@mail.ru                         =
   = Site  : lemgl.ru                                 =
   =                                                  =
-  = Собрано на Delphi 10.3 community                 =
   ====================================================
 }
 
@@ -159,14 +158,25 @@ type
   TGLColor3Arr = array[0..2] of TFloat;
 
   TGLColor = class;
+
   TGLColor3Rec  = record
-  public
-    R, G, B: TFloat;
-  public
-    procedure BindColor;
-    procedure SetColor(pR, pG, pB: TFloat); overload;
-    procedure SetColor(pColor: TGLColor); overload;
-    procedure ClearColor;
+    public
+      R, G, B: TFloat;
+    public
+      procedure BindColor;
+      procedure SetColor(pR, pG, pB: TFloat); overload;
+      procedure SetColor(pColor: TGLColor); overload;
+      procedure ClearColor;
+  end;
+
+  TGLColor4Rec = record
+    public
+      R, G, B, A: TFloat;
+    public
+      procedure BindColor;
+      procedure SetColor(pR, pG, pB, pA: TFloat); overload;
+      procedure SetColor(pColor: TGLColor); overload;
+      procedure ClearColor;
   end;
 
   TGLColor = class
@@ -183,6 +193,7 @@ type
     //OpenGL команды
     class procedure glColor3fx(pColor: Integer); overload;
     class function ColorToGLColor3Rec(pColor: Integer): TGLColor3Rec;
+    class function ColorToGLColor4Rec(pColor: Integer): TGLColor4Rec;
 
     procedure glColor3fx; overload; //Установить glColor3f(R, G, B);
     procedure glColor4fx; //Установить glColor3f(R, G, B, A);
@@ -451,9 +462,19 @@ end;
 
 class function TGLColor.ColorToGLColor3Rec(pColor: Integer): TGLColor3Rec;
 begin
-  Result.R:= (pColor mod $100) / 255;
-  Result.G:= ((pColor div $100) mod $100) / 255;
-  Result.B := (pColor div $10000) / 255;
+  Result.R := Byte(pColor) / 255;
+  Result.G := Byte(pColor shr 8)  / 255;
+  Result.B := Byte(pColor shr 16) / 255;
+end;
+
+class function TGLColor.ColorToGLColor4Rec(pColor: Integer): TGLColor4Rec;
+begin
+  Result.R := Byte(pColor) / 255;
+  Result.G := Byte(pColor shr 8)  / 255;
+  Result.B := Byte(pColor shr 16) / 255;
+  Result.A := 1;
+  //Альфа канал не трогаем, меняем только цвет
+  // Result.A := Byte(pColor shr 24) / 255;
 end;
 
 constructor TGLColor.Create(pR, pG, pB, pA: TFloat);
@@ -491,9 +512,11 @@ end;
 
 class procedure TGLColor.glColor3fx(pColor: Integer);
 begin
-  glColor3f((pColor mod $100) / 255,
-            ((pColor div $100) mod $100) / 255,
-            (pColor div $10000) / 255);
+  glColor3f(
+       Byte(pColor) / 255,
+       Byte(pColor shr 8)  / 255,
+       Byte(pColor shr 16) / 255
+       );
 end;
 
 procedure TGLColor.glColor3fx;
@@ -513,10 +536,10 @@ end;
 
 procedure TGLColor.SetColor(pColor: TColor);
 begin
-  R := (pColor mod $100) / 255;
-  G := ((pColor div $100) mod $100) / 255;
-  B := (pColor div $10000) / 255;
-  A := 0.0;
+  R := Byte(pColor) / 255;
+  G := Byte(pColor shr 8)  / 255;
+  B := Byte(pColor shr 16) / 255;
+  A := Byte(pColor shr 24) / 255;
 end;
 
 procedure TGLColor.SetColor(pR, pG, pB: TFloat);
@@ -599,38 +622,6 @@ begin
   //Сбрасываем цвет
   if not FVisible then
     FColor.A:= 0.0;
-end;
-
-{ TGLColor3Rec }
-
-procedure TGLColor3Rec.BindColor;
-begin
-  glColor3f(R, G, B);
-end;
-
-procedure TGLColor3Rec.ClearColor;
-begin
-  R:= 0.0;
-  G:= 0.0;
-  B:= 0.0;
-end;
-
-procedure TGLColor3Rec.SetColor(pColor: TGLColor);
-begin
- if not Assigned(pColor) then
-   Exit;
-
-  R:= pColor.R;
-  G:= pColor.G;
-  B:= pColor.B;
-
-end;
-
-procedure TGLColor3Rec.SetColor(pR, pG, pB: TFloat);
-begin
-  R:= pR;
-  G:= pG;
-  B:= pB;
 end;
 
 { TVertexPointClass }
@@ -930,7 +921,7 @@ end;
 
 destructor TTextureLink.Destroy;
 begin
-   if not IsEmpty then
+  if not IsEmpty then
     glDeleteTextures(1, @Link);
 
   inherited;
@@ -938,7 +929,74 @@ end;
 
 function TTextureLink.IsEmpty: Boolean;
 begin
-  Result:= Link = TEX_LINK_EMPTY;
+  Result:= (Link = TEX_LINK_EMPTY);
+end;
+
+{ TGLColor3Rec }
+
+procedure TGLColor3Rec.BindColor;
+begin
+  glColor3f(R, G, B);
+end;
+
+procedure TGLColor3Rec.ClearColor;
+begin
+  R:= 0.0;
+  G:= 0.0;
+  B:= 0.0;
+end;
+
+procedure TGLColor3Rec.SetColor(pColor: TGLColor);
+begin
+ if not Assigned(pColor) then
+   Exit;
+
+  R:= pColor.R;
+  G:= pColor.G;
+  B:= pColor.B;
+
+end;
+
+procedure TGLColor3Rec.SetColor(pR, pG, pB: TFloat);
+begin
+  R:= pR;
+  G:= pG;
+  B:= pB;
+end;
+
+{ TGLColor4Rec }
+
+procedure TGLColor4Rec.BindColor;
+begin
+  glColor4f(R, G, B, A);
+end;
+
+procedure TGLColor4Rec.ClearColor;
+begin
+  R:= 0.0;
+  G:= 0.0;
+  B:= 0.0;
+  A:= 0.0;
+end;
+
+procedure TGLColor4Rec.SetColor(pColor: TGLColor);
+begin
+  if not Assigned(pColor) then
+    Exit;
+
+  R:= pColor.R;
+  G:= pColor.G;
+  B:= pColor.B;
+  A:= 1;
+// A:= pColor.A;
+end;
+
+procedure TGLColor4Rec.SetColor(pR, pG, pB, pA: TFloat);
+begin
+  R:= pR;
+  G:= pG;
+  B:= pB;
+  A:= pA;
 end;
 
 end.

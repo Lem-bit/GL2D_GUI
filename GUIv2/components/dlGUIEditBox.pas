@@ -2,7 +2,7 @@
 
 interface
 
-uses Windows, Graphics, Classes, dlOpenGL, dlGUITypes, dlGUIObject, dlGUIPaletteHelper;
+uses SysUtils, Windows, Graphics, Classes, dlOpenGL, dlGUITypes, dlGUIObject, dlGUIPaletteHelper;
 
 {
   ====================================================
@@ -12,7 +12,6 @@ uses Windows, Graphics, Classes, dlOpenGL, dlGUITypes, dlGUIObject, dlGUIPalette
   = Email : gui_proj@mail.ru                         =
   = Site  : lemgl.ru                                 =
   =                                                  =
-  = Собрано на Delphi 10.3 community                 =
   ====================================================
 }
 
@@ -59,6 +58,7 @@ type
       procedure SetResize; override;
     public
       constructor Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
+      destructor Destroy; override;
 
       procedure OnKeyDown(var Key: Word; Shift: TShiftState); override;
       procedure OnKeyPress(Key: Char); override;
@@ -118,6 +118,14 @@ begin
   VertexList.MakeSquare(0, 0, Width, Height, Color, GUIPalette.GetCellRect(pal_Frame));
   VertexList.MakeSquareOffset(0, 1, Color, GUIPalette.GetCellRect(pal_Window));
   UpdateCursorRect;
+end;
+
+destructor TGUIEditBox.Destroy;
+begin
+  if Assigned(FCursor) then
+    FreeAndNil(FCursor);
+
+  inherited;
 end;
 
 procedure TGUIEditBox.OnKeyDown(var Key: Word; Shift: TShiftState);

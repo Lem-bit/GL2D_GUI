@@ -13,7 +13,6 @@ interface
   = Email : gui_proj@mail.ru                         =
   = Site  : lemgl.ru                                 =
   =                                                  =
-  = Собрано на Delphi 10.3 community                 =
   ====================================================
 }
 
@@ -74,6 +73,8 @@ interface
      public
        constructor Create(pName, pCaption: String; pX, pY, pWidth, pHeight: Integer; pTextureLink: TTextureLink = nil; pTextureFont: TTextureLink = nil;
           pBorderIcons: TGUIBorderIcons = fbiAll);
+       destructor Destroy; override;
+
        procedure OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton); override;
        procedure OnMouseUp(pX, pY: Integer; Button: TGUIMouseButton); override;
        procedure OnMouseMove(pX, pY: Integer); override;
@@ -106,6 +107,7 @@ interface
      public
        constructor Create(pName, pCaption: String; pX, pY, pWidth, pHeight: Integer; pTextureLink: TTextureLink = nil; pTextureFont: TTextureLink = nil; pFormStyle: TGUIFormStyle = fglNormal;
          pBorderIcons: TGUIBorderIcons = fbiAll);
+       destructor Destroy; override;
 
        function IsExists(pIndex: integer): Boolean;
 
@@ -215,6 +217,16 @@ begin
      clGray, clWhite, clWhite, clGray, GUIPalette.GetCellRect(pal_Window));
 end;
 
+destructor TGUIFormCaption.Destroy;
+var i: integer;
+begin
+  for i:= Low(FButton) to High(FButton) do
+    if Assigned(FButton[i]) then
+      FButton[i].Free;
+
+  inherited;
+end;
+
 procedure TGUIFormCaption.HideWindow(Sender: TObject; ParamObj: Pointer = nil);
 begin
   Hide:= True;
@@ -270,6 +282,7 @@ begin
        FRect.Y - (FLastPosY - pY)
     );
 
+    //
     if Rect.X < 0 then X:= 0;
     if Rect.Y < 0 then Y:= 0;
 
@@ -427,8 +440,9 @@ begin
       pComponent.SetTextureLink(Self.GetTextureLink);
 
   //Если нет шрифта то присваиваем
-  if (pComponent.Font.GetTextureLink.Link = 0) then
-    pComponent.Font.CopyFrom(Self.FFont);
+  if pComponent.Font.GetTextureLink <> nil then
+    if (pComponent.Font.GetTextureLink.Link = 0) then
+      pComponent.Font.CopyFrom(Self.FFont);
 
   msg.Msg := MSG_FORM_INSERTOBJ;
   msg.Self:= self;
@@ -440,6 +454,29 @@ begin
 
   //Отправка компоненту уведомления что добавили на форму
   pComponent.SendGUIMessage(msg);
+end;
+
+destructor TGUIForm.Destroy;
+var i: integer;
+begin
+  if Assigned(FCaption) then
+    FreeAndNil(FCaption);
+
+  if Assigned(FActivePopup) then
+    FreeAndNil(FActivePopup);
+
+  if Assigned(FHint) then
+    FreeAndNil(FHint);
+
+  if Assigned(FBlend) then
+    FreeAndNil(FBlend);
+
+  for I := 0 to FComponent.Count - 1 do
+    TGUIObject(FComponent[i]).Free;
+
+  FFocusComp:= nil;
+
+  inherited;
 end;
 
 procedure TGUIForm.DestroyActivePopup;

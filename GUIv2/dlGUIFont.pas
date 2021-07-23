@@ -12,7 +12,6 @@ interface
   = Email : gui_proj@mail.ru                         =
   = Site  : lemgl.ru                                 =
   =                                                  =
-  = Собрано на Delphi 10.3 community                 =
   ====================================================
 }
 
@@ -24,10 +23,11 @@ interface
        Width : TFloat;   //Ширина символа
        s, t  : TFloat;   //Начальные координаты текстуры
        sw, tw: TFloat;   //Конечные координаты
-       color : array[0..3] of TGLColor3Rec; //Цвет символа
+       color : array[0..3] of TGLColor4Rec; //Цвет символа
      public
        //Установить цвет символа
        procedure SetColor(pColor: Integer);
+       procedure ClearTextureCoord;
    end;
 
    //Для FontMaker
@@ -80,6 +80,7 @@ interface
        procedure UpdateStatus(pStatus: TGUIFontSetter);
      public
        constructor Create(pTextureLink: TTextureLink);
+       destructor Destroy; override;
        //Загрузить информацию о текстуре
        function LoadInfoFromFile(const AFileName: String): Boolean;
        //Пересчитать текстурные координаты
@@ -176,6 +177,9 @@ end;
 procedure TGUIFont.SetColor(pColor: TColor);
 var FID: Integer;
 begin
+  if not Assigned(FColor) then
+    Exit;
+
   if pColor = FColor.GetColor then
     Exit;
 
@@ -219,6 +223,12 @@ begin
   FTextureLink:= TTextureLink.Create;
   FColor.SetColor(clWhite);
   SetTextureLink(pTextureLink);
+end;
+
+destructor TGUIFont.Destroy;
+begin
+  FreeAndNil(FColor);
+  inherited;
 end;
 
 function TGUIFont.GetColor: TColor;
@@ -343,9 +353,11 @@ begin
   if not Assigned(FTextureLink) then
     Exit;
 
+
   glEnable(GL_BLEND);
-//  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-  glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+//  glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+  glBlendEquation(GL_FUNC_ADD);
 
   glEnable(GL_TEXTURE_2D);
   FTextureLink.Bind;
@@ -354,7 +366,7 @@ begin
     abs_pos:= 0;
     Line   := 0;
     glTranslatef(pX, pY, 0);
-    glColor4f(FColor.R, FColor.G, FColor.B, 1);
+    glColor4f(FColor.R, FColor.G, FColor.B, FColor.A);
     glScalef(FScale, FScale, FScale);
 
       for FID:= 1 to Length(pText) do
@@ -428,6 +440,11 @@ begin
 
   for FID := Low(FCharInfo) to High(FCharInfo) do
   begin
+    if FGrades[0] = 0 then
+      Exit;
+    if FGrades[1] = 0 then
+      Exit;
+
     Row:= FID mod FGrades[0];
     Col:= FID div FGrades[1];
 
@@ -459,11 +476,19 @@ end;
 
 { TGUIFontChar }
 
+procedure TGUIFontChar.ClearTextureCoord;
+begin
+  s := 0.0;
+  t := 0.0;
+  sw:= 0.0;
+  tw:= 0.0;
+end;
+
 procedure TGUIFontChar.SetColor(pColor: Integer);
 var FID: Integer;
 begin
   for FID := Low(Color) to High(Color) do
-    color[FID]:= TGLColor.ColorToGLColor3Rec(pColor);
+    color[FID]:= TGLColor.ColorToGLColor4Rec(pColor);
 end;
 
 end.

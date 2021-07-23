@@ -12,7 +12,6 @@ interface
   = Email : gui_proj@mail.ru                         =
   = Site  : lemgl.ru                                 =
   =                                                  =
-  = Собрано на Delphi 10.3 community                 =
   ====================================================
 }
 
@@ -125,7 +124,12 @@ begin
 end;
 
 destructor TGUIFormList.Destroy;
+var i: integer;
 begin
+  if Assigned(FFormList) then
+    for i := FFormList.Count - 1 downto 0 do
+      TGUIForm(FFormList[i]).Free;
+
   FreeAndNil(FFormList);
   inherited;
 end;
@@ -274,7 +278,7 @@ end;
 
 function TGUIFormList.OnMouseDown(pX, pY: Integer; Button: TMouseButton): Boolean;
 begin
-  if Button = mbLeft then
+ // if Button = mbLeft then
     FMouseDown:= True;
 
   Result:= False;
@@ -306,7 +310,7 @@ end;
 
 function TGUIFormList.OnMouseUp(pX, pY: Integer; Button: TMouseButton): Boolean;
 begin
-  if Button = mbLeft then
+ // if Button = mbLeft then
     FMouseDown:= False;
 
   Result:= False;

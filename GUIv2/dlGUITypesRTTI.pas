@@ -12,7 +12,6 @@ uses SysUtils;
   = Email : gui_proj@mail.ru                         =
   = Site  : lemgl.ru                                 =
   =                                                  =
-  = Собрано на Delphi 10.3 community                 =
   ====================================================
 }
 
@@ -174,5 +173,9 @@ end;
 
 initialization
   objRTTI:= TObjRTTI.Create;
+
+finalization
+  if Assigned(objRTTI) then
+    FreeAndNil(objRTTI);
 
 end.
