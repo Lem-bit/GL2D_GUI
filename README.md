@@ -6,4 +6,4 @@
 #### Telegram: https://t.me/delphi_lemgl
 
 ---
-Собрано на Delphi 10.3 community
+Собрано на Delphi 10.4.2 community
