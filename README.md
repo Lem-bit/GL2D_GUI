@@ -1,4 +1,4 @@
-# OpenGL graphic user interface
+# OpenGL graphic user interface 2.07
   
 ### Author: Ansperi L.L., 2021
 ### Email: gui_proj@mail.ru
