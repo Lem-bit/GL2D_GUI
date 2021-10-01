@@ -312,7 +312,7 @@ begin
   FAction       := [];
   FTextureInfo.SetSize(1, 1);
   FVertexList   := TGUIVertexList.Create;
-  FTextureLink  := TTextureLink.Create;
+  FTextureLink  := nil;// TTextureLink.Create;
   FFont         := TGUIFont.Create(nil);
   FBlend        := TBlendParam.Create();
   FColor        := TGLColor.Create(clWhite);

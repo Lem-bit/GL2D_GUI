@@ -433,13 +433,13 @@ begin
     WM_KEYDOWN:
     begin
       AKey:= AMessage.WParamLo;
-      {
-      const
-         AltMask = $20000000;
-         if GetKeyState(VK_SHIFT) < 0 then Include(Result, ssShift);
-         if GetKeyState(VK_CONTROL) < 0 then Include(Result, ssCtrl);
-         if KeyData and AltMask <> 0 then Include(Result, ssAlt);
-      }
+      if GetKeyState(VK_SHIFT)   < 0 then
+        Shift:= Shift + [ssShift];
+      if GetKeyState(VK_CONTROL) < 0 then
+        Shift:= Shift + [ssCtrl];
+      if (AKey and $20000000)   <> 0 then
+        Shift:= Shift + [ssAlt];
+
       OnKeyDown(AKey, Shift);
     end;
 

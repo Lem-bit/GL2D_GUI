@@ -122,7 +122,6 @@ end;
 constructor TGUIComboBox.Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink);
 begin
   inherited Create(pName, gtcComboBox);
-  FArea:= TGUITypeArea.Create;
 
   FComponent:= TList.Create;
   SetRect(pX, pY, 150, 19);

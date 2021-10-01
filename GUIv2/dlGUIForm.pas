@@ -394,6 +394,27 @@ begin
   VertexList.MakeSquareOffset(0, 1, Color, GUIPalette.GetCellRect(pal_Window));
 end;
 
+destructor TGUIForm.Destroy;
+var i: integer;
+begin
+  if Assigned(FCaption) then
+    FreeAndNil(FCaption);
+
+  if Assigned(FHint) then
+    FreeAndNil(FHint);
+
+  if Assigned(FBlend) then
+    FreeAndNil(FBlend);
+
+  for I := 0 to FComponent.Count - 1 do
+    TGUIObject(FComponent[i]).Free;
+
+  FFocusComp:= nil;
+  FreeAndNil(FComponent);
+
+  inherited;
+end;
+
 procedure TGUIForm.SetResize;
 begin
   //Основная часть
@@ -435,14 +456,12 @@ begin
     Exit;
 
   //Если нет текстуры то присваиваем
-  if (pComponent.GetTextureLink = nil)   or
-     (pComponent.GetTextureLink.IsEmpty) then
-      pComponent.SetTextureLink(Self.GetTextureLink);
+  if (pComponent.GetTextureLink = nil) then
+    pComponent.SetTextureLink(Self.GetTextureLink);
 
   //Если нет шрифта то присваиваем
-  if pComponent.Font.GetTextureLink <> nil then
-    if (pComponent.Font.GetTextureLink.Link = 0) then
-      pComponent.Font.CopyFrom(Self.FFont);
+  if pComponent.Font.GetTextureLink = nil then
+    pComponent.Font.CopyFrom(Self.FFont);
 
   msg.Msg := MSG_FORM_INSERTOBJ;
   msg.Self:= self;
@@ -454,29 +473,6 @@ begin
 
   //Отправка компоненту уведомления что добавили на форму
   pComponent.SendGUIMessage(msg);
-end;
-
-destructor TGUIForm.Destroy;
-var i: integer;
-begin
-  if Assigned(FCaption) then
-    FreeAndNil(FCaption);
-
-  if Assigned(FActivePopup) then
-    FreeAndNil(FActivePopup);
-
-  if Assigned(FHint) then
-    FreeAndNil(FHint);
-
-  if Assigned(FBlend) then
-    FreeAndNil(FBlend);
-
-  for I := 0 to FComponent.Count - 1 do
-    TGUIObject(FComponent[i]).Free;
-
-  FFocusComp:= nil;
-
-  inherited;
 end;
 
 procedure TGUIForm.DestroyActivePopup;

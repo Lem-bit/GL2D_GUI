@@ -39,6 +39,7 @@ type
       procedure SetResize; override;
     public
       constructor Create(pName: String; pMenuName: String; pX, pY: Integer);
+      destructor Destroy; override;
       procedure RenderText; override;
       procedure SetColorGradient(pVertexA, pVertexB, pVertexC, pVertexD: TColor);
     published
@@ -59,10 +60,11 @@ type
       function GetItem(pIndex: integer): TGUIMenuItem;
     protected
       procedure SetHide(pHide: Boolean); override;
-      procedure SetFontLink(pFont: TGUIFont); override;
+      procedure SetFontEvent; override;
     public
       //Создать главное меню Popup
       constructor Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
+      destructor Destroy; override;
 
       //Добавить элемент меню
       procedure Add(pMenuName: String; pDisable: Boolean = False; pProc: TGUIProc = nil; pColor: TColor = clWhite);
@@ -72,7 +74,7 @@ type
       //Кол-во элементов меню
       function Count: integer;
 
-      destructor Destroy; override;
+      procedure SetTextureLink(pTextureLink: TTextureLink); override;
     public
       OnPopup: TGUIProc;
 
@@ -141,7 +143,7 @@ var i: integer;
 begin
   if Assigned(FMenu) then
     for i := 0 to FMenu.Count - 1 do
-      TGUIMenuItem(FMenu.Items[i]).Destroy;
+      TGUIMenuItem(FMenu.Items[i]).Free;
 
   FreeAndNil(FMenu);
   inherited;
@@ -182,7 +184,7 @@ begin
   Item.Parent          := Self;
   Item.OnClick         := pProc;
   Item.SetTextureLink(Self.GetTextureLink);
-  Item.Font            := Self.Font;
+  Item.Font.SetTextureLink(Self.Font.GetTextureLink);
   FMenu.Add(Item);
 
   PrepareMenuItems;
@@ -308,7 +310,7 @@ begin
     Item:= TGUIMenuItem(FMenu.Items[FID]);
 
     //Назначение каких либо общих свойств
-    if Item.GetTextureLink.IsEmpty then
+    if Self.GetTextureLink <> nil then
       Item.SetTextureLink(Self.GetTextureLink);
 
     //Размеры элемента
@@ -337,13 +339,13 @@ begin
 
 end;
 
-procedure TGUIPopupMenu.SetFontLink(pFont: TGUIFont);
+procedure TGUIPopupMenu.SetFontEvent;
 var FID: Integer;
 begin
   inherited;
 
   for FID := 0 to FMenu.Count - 1 do
-    TGUIMenuItem(FMenu.Items[FID]).FFont.CopyMemoryFrom(pFont);
+    TGUIMenuItem(FMenu.Items[FID]).FFont.SetTextureLink(Self.Font.GetTextureLink);
 
   PrepareMenuItems;
 end;
@@ -354,9 +356,18 @@ begin
   FSelected:= -1;
 end;
 
+procedure TGUIPopupMenu.SetTextureLink(pTextureLink: TTextureLink);
+begin
+  inherited;
+  PrepareMenuItems;
+end;
+
 procedure TGUIPopupMenu.Render;
 var FID: Integer;
 begin
+  if FFont._State <> gfsNone then
+    SetFontEvent;
+
   if FHide then
     Exit;
 
@@ -471,6 +482,12 @@ begin
   inherited;
   VertexList.SetVertexPosSquare(0, 0, 0, Rect.Width, Rect.Height);
   VertexList.SetVertexPosSquare(4, 0, 0, Rect.Width, Rect.Height);
+end;
+
+destructor TGUIMenuItem.Destroy;
+begin
+
+  inherited;
 end;
 
 procedure TGUIMenuItem.DrawMenuSelected(pSelected: Boolean);

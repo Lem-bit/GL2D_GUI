@@ -2,7 +2,8 @@
 
 interface
 
-uses SysUtils, Windows, Graphics, Classes, dlOpenGL, dlGUITypes, dlGUIObject, dlGUIPaletteHelper;
+uses SysUtils, Windows, Graphics, Classes, dlOpenGL, dlGUITypes, dlGUIObject, dlGUIPaletteHelper,
+  dlGUIFont;
 
 {
   ====================================================
@@ -29,8 +30,55 @@ type
                     tiCustom   //Свои значения (заполняется поле) Mask
                    );
 
-  TGUIEditBox = class(TGUIObject)
+  TGUIEditBoxSelection = class
+    strict private
+      const START_POS = 1;
+            END_POS   = 2;
+    strict private
+      FUpdate    : Boolean; //Обновилась область выбора
+
+      FOnSelect  : Boolean; //На данный момент идет выбор
+      FSelStart  : Integer;
+      FSelEnd    : Integer;
+
+      FStartOffset: Integer;
+
+      FText      : String;  //Выбранный текст
+
+      FBlend     : TBlendParam;
+      FRect      : TGUIObjectRect;
+      FCurrSEPos : array[1..2] of Integer; //Текущие (расчитанные) стартовая и конечная позиции
+      FParent    : TGUIObject;
     private
+      procedure SetText(const AText: String);
+
+      procedure SetSelStart(value: integer);
+      procedure SetSelEnd(value: integer);
+
+      function GetCurrentStartPos: Integer;
+      function GetCurrentEndPos: Integer;
+
+      procedure ResetUpdate; //Сбросить флаг обновления области выбора
+    private
+      property SelStart   : Integer read FSelStart    write SetSelStart;
+      property SelEnd     : Integer read FSelEnd      write SetSelEnd;
+      property StartOffset: Integer read FStartOffset write FStartOffset;
+      property OnSelect   : Boolean read FOnSelect    write FOnSelect;
+    public
+      constructor Create(const AParent: TGUIObject);
+      destructor Destroy; override;
+
+      procedure Calc;
+      procedure Render;
+      procedure Cancel;
+    public
+      property CurrStart: Integer read GetCurrentStartPos;
+      property CurrEnd  : Integer read GetCurrentEndPos;
+      property Text     : String  read FText;
+  end;
+
+  TGUIEditBox = class(TGUIObject)
+    strict private
       FOffsetX    : Integer; //Сдвиг текста
 
       FDrawText   : String; //Текст который рисуем
@@ -46,13 +94,25 @@ type
       FReadOnly   : Boolean; //Нельзя менять данные в поле ввода
 
       FBorderStyle: TGUIBorderStyle;
+
+      FSelection  : TGUIEditBoxSelection; //Выбор текста
     private
+      //Позиция символа по координате
+      function CharPosByCoord(pCoord: Integer): Integer;
+
       function SetCursorPos(pValue: Integer): Boolean;
       procedure SetMaxLength(pMaxLength: Integer);
       procedure SetText(pText: String);
       procedure UpdateCursorRect;
       procedure SetBorderStyle(pBorderStyle: TGUIBorderStyle);
       procedure ResetCursor;
+      function GetOffsetX: Integer;
+
+      procedure DeleteSelection;
+
+      procedure DoKeyDown(var Key: Word; Shift: TShiftState);
+      procedure DoKeyDownSelected(var Key: Word; Shift: TShiftState);
+
     protected
       procedure SetFontEvent; override;
       procedure SetResize; override;
@@ -63,7 +123,9 @@ type
       procedure OnKeyDown(var Key: Word; Shift: TShiftState); override;
       procedure OnKeyPress(Key: Char); override;
 
+      procedure OnMouseMove(pX, pY: Integer); override;
       procedure OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton); override;
+      procedure OnMouseUp(pX, pY: Integer; Button: TGUIMouseButton); override;
 
       procedure RenderText; override;
       procedure Render; override;
@@ -98,11 +160,28 @@ const GROUP_CURSOR = 1;
 
 { TGUIEditBox }
 
+function TGUIEditBox.CharPosByCoord(pCoord: Integer): Integer;
+var i   : integer;
+    BPos: TFloat;
+begin
+  BPos:= 0.0;
+
+  for i := 1 to Length(FDrawText) do
+  begin
+    BPos:= BPos + Font.GetTextWidth(FDrawText[i]);
+    if BPos > (pCoord - X) then
+      Break;
+  end;
+
+  Result:= i;
+end;
+
 constructor TGUIEditBox.Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
 begin
   inherited Create(pName, gtcEditBox);
 
-  FCursor:= TGUICursor.Create(clWhite);
+  FCursor   := TGUICursor.Create(clWhite);
+  FSelection:= TGUIEditBoxSelection.Create(Self);
   SetRect(pX, pY, 80, 20);
 
   FCursorWidth     := 1;
@@ -120,12 +199,104 @@ begin
   UpdateCursorRect;
 end;
 
+procedure TGUIEditBox.DeleteSelection;
+begin
+  FSelection.Calc;
+  Delete(FText, FSelection.GetCurrentStartPos, FSelection.GetCurrentEndPos);
+
+  if (FOffsetX > FSelection.StartOffset)  then
+      FOffsetX:= FSelection.StartOffset;
+
+  SetCursorPos(FSelection.GetCurrentStartPos - FOffsetX);
+  FSelection.Cancel;
+  FUpdate:= True;
+end;
+
 destructor TGUIEditBox.Destroy;
 begin
   if Assigned(FCursor) then
     FreeAndNil(FCursor);
 
+  if Assigned(FSelection) then
+    FreeAndNil(FSelection);
+
   inherited;
+end;
+
+procedure TGUIEditBox.DoKeyDown(var Key: Word; Shift: TShiftState);
+begin
+  case Key of
+    VK_LEFT   : SetCursorPos(FCursor.CharPos - 1);
+    VK_RIGHT  : SetCursorPos(FCursor.CharPos + 1);
+    VK_END    : SetCursorPos((Length(FText) - FOffsetX) + 1);
+    VK_HOME   : ResetCursor;
+    VK_BACK   : if SetCursorPos(FCursor.CharPos - 1) then
+                  Delete(FText, FCursor.CharPos + FOffsetX, 1);
+    VK_DELETE : if SetCursorPos(FCursor.CharPos) then
+                  Delete(FText, FCursor.CharPos + FOffsetX, 1);
+  end;
+end;
+
+procedure TGUIEditBox.DoKeyDownSelected(var Key: Word; Shift: TShiftState);
+
+procedure ActiveSelection;
+begin
+  if FSelection.OnSelect then
+    Exit;
+
+  FSelection.OnSelect   := True;
+  FSelection.StartOffset:= FOffsetX;
+  FSelection.SelStart   := FCursor.CharPos;
+  FSelection.SelEnd     := FCursor.CharPos + FOffsetX;
+  FSelection.Calc;
+end;
+
+begin
+  //Если шифт не нажат значит обрабатываем как простое нажатие
+  if not (ssShift in Shift) then
+    case Key of
+      VK_LEFT, VK_RIGHT, VK_END, VK_HOME:
+        begin
+          FSelection.Cancel;
+          DoKeyDown(Key, Shift);
+          Exit;
+        end;
+    end;
+
+  //Если шифт нажат
+  ActiveSelection;
+
+  case Key of
+    VK_LEFT  : begin
+                 SetCursorPos(FCursor.CharPos - 1);
+                 FSelection.SelEnd:= FCursor.CharPos + FOffsetX;
+                 FSelection.Calc;
+               end;
+    VK_RIGHT : begin
+                 SetCursorPos(FCursor.CharPos + 1);
+                 FSelection.SelEnd:= FCursor.CharPos + FOffsetX;
+                 FSelection.Calc;
+               end;
+    VK_END   : begin
+                 SetCursorPos((Length(FText) - FOffsetX) + 1);
+                 FSelection.SelEnd:= Length(FText) + 1;
+                 FSelection.Calc;
+               end;
+    VK_HOME  : begin
+                 ResetCursor;
+                 FSelection.SelEnd:= 1;
+                 FSelection.Calc;
+               end;
+
+    VK_BACK  ,
+    VK_DELETE: DeleteSelection;
+  end;
+
+end;
+
+function TGUIEditBox.GetOffsetX: Integer;
+begin
+  Result:= FOffsetX;
 end;
 
 procedure TGUIEditBox.OnKeyDown(var Key: Word; Shift: TShiftState);
@@ -136,16 +307,10 @@ begin
   if not Focused then
     Exit;
 
-  case Key of
-    VK_LEFT   : SetCursorPos(FCursor.CharPos - 1);
-    VK_RIGHT  : SetCursorPos(FCursor.CharPos + 1);
-    VK_END    : SetCursorPos((Length(FText) - FOffsetX) + 1);
-    VK_HOME   : ResetCursor;
-    VK_BACK   : if SetCursorPos(FCursor.CharPos - 1) then
-                   Delete(FText, FCursor.CharPos + FOffsetX, 1);
-    VK_DELETE : if SetCursorPos(FCursor.CharPos) then
-                   Delete(FText, FCursor.CharPos + FOffsetX, 1);
-  end;
+  if (FSelection.OnSelect) or (ssShift in Shift) then
+    DoKeyDownSelected(Key, Shift)
+  else
+    DoKeyDown(Key, Shift);
 end;
 
 procedure TGUIEditBox.OnKeyPress(Key: Char);
@@ -189,32 +354,68 @@ begin
 
   end;
 
+  if FSelection.OnSelect then
+    DeleteSelection;
+
   Insert(Key, FText, FCursor.CharPos + FOffsetX);
   SetCursorPos(FCursor.CharPos + 1);
 end;
 
 procedure TGUIEditBox.OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton);
-var i   : Integer;
-    BPos: TFloat;
 begin
   inherited;
 
   //Показываем курсор
   FCursor.ResetCursor;
+  FSelection.Cancel;
 
-  BPos:= 0.0;
+  SetCursorPos(CharPosByCoord(pX));
 
-  for i := 1 to Length(FDrawText) do
-  begin
-    BPos:= BPos + Font.GetTextWidth(FDrawText[i]);
-    if BPos > (pX - X) then Break;
-  end;
+  if not (goaFocused in GetAction) then
+    Exit;
 
-  SetCursorPos(i);
+  //Предполагаем что может начаться выделение текста
+  FSelection.SelStart   := FCursor.CharPos; //индекс
+  FSelection.StartOffset:= FOffsetX;
+end;
+
+procedure TGUIEditBox.OnMouseMove(pX, pY: Integer);
+begin
+  inherited;
+
+  if not (goaFocused in GetAction) then
+    Exit;
+
+  //Выделяем текст
+  if not (goaDown in GetAction) then
+    Exit;
+
+  FSelection.OnSelect:= True;
+
+  if (pX < Rect.X) then
+    SetCursorPos(FCursor.CharPos - 1);
+
+  SetCursorPos(CharPosByCoord(pX));
+  FSelection.SelEnd := FCursor.CharPos + FOffsetX;
+end;
+
+procedure TGUIEditBox.OnMouseUp(pX, pY: Integer; Button: TGUIMouseButton);
+begin
+  inherited;
+
+  if not (goaFocused in GetAction) then
+    Exit;
+
+  if not FSelection.OnSelect then
+    Exit;
+
+  SetCursorPos(CharPosByCoord(pX));
+  FSelection.SelEnd := FCursor.CharPos + FOffsetX;
 end;
 
 procedure TGUIEditBox.Render;
 begin
+
   if FBorderStyle <> bsNone then
     inherited
   else
@@ -222,6 +423,15 @@ begin
     AfterObjRender;
     RenderText;
   end;
+
+  if not (goaFocused in GetAction) then
+    FSelection.Cancel;
+
+  FSelection.Calc;
+  FSelection.Render;
+
+  Hint.Enable:= True;
+  Hint.Text:= FSelection.Text;
 
   if not Enable then
     Exit;
@@ -267,7 +477,7 @@ begin
                 //Переводим метод прорисовки в GL_LINE_LOOP
                 FModeDraw:= GL_LINE_LOOP;
                 //Показываем только вершины 2, 3, 6, 7
-                VertexList.SetVertexHideList(false, [2, 3]);
+                VertexList.SetVertexShowInList(false, [2, 3]);
                 //Сообщаем что на 3-й вершине объект заканчивается и начинается другой
                 VertexList.Vertex[3].GapOccur:= True;
                 //Устанавливаем текстурные координаты
@@ -279,7 +489,7 @@ begin
                 //Переводим метод прорисовки в GL_QUADS (по умолчанию у TGUIObject)
                 FModeDraw:= GL_QUADS;
                 //
-                VertexList.SetVertexHideList(true, [-1]);
+                VertexList.SetVertexShowInList(true, [-1]);
                 //
                 VertexList.Vertex[3].GapOccur:= False;
                 //
@@ -299,6 +509,9 @@ begin
   OldCharPos     := FCursor.CharPos;
   FCursor.CharPos:= pValue;
 
+  if FOffsetX < 0 then
+    FOffsetX:= 0;
+
   if (FCursor.CharPos + FOffsetX < 1) or (Length(FText) < 1) then
   begin
     FCursor.CharPos  := 1;
@@ -309,7 +522,9 @@ begin
   if (FCursor.CharPos + FOffsetX) > Length(FText) + 1 then
   begin
     FCursor.CharPos:= OldCharPos;
-    SetCursorPos(FCursor.CharPos);
+
+    if FCursor.CharPos <> pValue then
+      SetCursorPos(FCursor.CharPos);
     Exit;
   end;
 
@@ -339,7 +554,7 @@ begin
   inherited;
 
   if Rect.Height <> 0 then
-    FTextOffset.Y:= Trunc(((Rect.Height - 2 - FFont.GetTextHeight) / 2))
+    FTextOffset.Y:= Trunc(((Rect.Height - 2 - FFont.Height) / 2))
   else
     FTextOffset.Y:= 0;
 end;
@@ -368,6 +583,131 @@ end;
 procedure TGUIEditBox.UpdateCursorRect;
 begin
   FCursor.Rect.SetRect(Rect.X + 1, Rect.Y + 2, FCursorWidth, Rect.Height - 4);
+end;
+
+{ TGUIEditBoxSelection }
+
+procedure TGUIEditBoxSelection.Calc;
+var OX, SX, EX: Integer;
+    Parent: TGUIEditBox;
+begin
+  if not OnSelect then
+    Exit;
+
+  if not FUpdate then
+    Exit;
+
+  if not Assigned(FParent) then
+    Exit;
+
+  Parent:= TGUIEditBox(FParent);
+  FRect.SetRect(Parent.Rect);
+
+  FCurrSEPos[START_POS]:= SelStart + StartOffset;
+  FCurrSEPos[END_POS  ]:= SelEnd - FCurrSEPos[START_POS];
+
+  //Обратное направление выбора
+  if FCurrSEPos[END_POS] < 0 then
+  begin
+    FCurrSEPos[END_POS]  := FCurrSEPos[START_POS] - SelEnd;
+    FCurrSEPos[START_POS]:= SelEnd;
+  end;
+
+  //Копируем выбранный текст
+  SetText(Copy(Parent.Text, FCurrSEPos[START_POS], FCurrSEPos[END_POS]));
+
+  //
+  SX:= Round(Parent.Font.GetTextWidth(
+      Copy(Parent.Text, 1 + Parent.GetOffsetX, FCurrSEPos[START_POS] - Parent.GetOffsetX - 1))
+    );
+  EX:= Round(Parent.Font.GetTextWidth(
+      Copy(Parent.Text, FCurrSEPos[START_POS], FCurrSEPos[END_POS]))
+    );
+  OX:= Round(Parent.Font.GetTextWidth(
+       Copy(Parent.Text, 1 + Parent.GetOffsetX, FCurrSEPos[END_POS] - (Parent.GetOffsetX + 1) + FCurrSEPos[START_POS] ))
+    );
+
+  if EX > OX then
+    EX:= EX - (EX - OX);
+
+  if Parent.GetOffsetX > FCurrSEPos[START_POS] then
+    FRect.X:= Parent.Rect.X
+  else
+    FRect.X:= Parent.Rect.X + SX;
+
+  if SX + EX > Parent.Rect.Width then
+    FRect.Width:= Parent.Rect.Width - SX
+  else
+    FRect.Width:= EX;
+
+  ResetUpdate;
+end;
+
+procedure TGUIEditBoxSelection.Cancel;
+begin
+  OnSelect  := False;
+  SelStart  := 0;
+  SelEnd    := 0;
+  SetText('');
+  ResetUpdate;
+end;
+
+constructor TGUIEditBoxSelection.Create(const AParent: TGUIObject);
+begin
+  FBlend:= TBlendParam.Create;
+  FBlend.Set_One_One;
+  FParent:= AParent;
+end;
+
+destructor TGUIEditBoxSelection.Destroy;
+begin
+  if Assigned(FBlend) then
+    FreeAndNil(FBlend);
+
+  inherited;
+end;
+
+function TGUIEditBoxSelection.GetCurrentEndPos: integer;
+begin
+  Result:= FCurrSEPos[END_POS];
+end;
+
+function TGUIEditBoxSelection.GetCurrentStartPos: Integer;
+begin
+  Result:= FCurrSEPos[START_POS];
+end;
+
+procedure TGUIEditBoxSelection.Render;
+begin
+  if not OnSelect then
+    Exit;
+
+  FBlend.Bind;
+  TGLColor.glColor3fx($00333333);
+  FRect.SetRect(FRect);
+  FRect.Render(0, GL_QUADS);
+end;
+
+procedure TGUIEditBoxSelection.ResetUpdate;
+begin
+  FUpdate:= False;
+end;
+
+procedure TGUIEditBoxSelection.SetSelEnd(value: integer);
+begin
+  FSelEnd:= Value;
+  FUpdate:= True;
+end;
+
+procedure TGUIEditBoxSelection.SetSelStart(value: integer);
+begin
+  FSelStart:= Value;
+  FUpdate  := True;
+end;
+
+procedure TGUIEditBoxSelection.SetText(const AText: String);
+begin
+  FText:= AText + ', length: ' + Length(AText).ToString;
 end;
 
 end.

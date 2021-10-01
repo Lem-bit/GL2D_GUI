@@ -78,19 +78,19 @@ begin
 
   case FShape of
     //true так как значение инвертируется если элемент не найден в списке
-    bsBox   : VertexList.SetVertexHideList(true , [-1]);
+    bsBox   : VertexList.SetVertexShowInList(true , [-1]);
 
     //
-    bsTop   : VertexList.SetVertexHideList(false, [0, 1, 4, 5]);
+    bsTop   : VertexList.SetVertexShowInList(false, [0, 1, 4, 5]);
 
     //
-    bsLeft  : VertexList.SetVertexHideList(false, [0, 3, 4, 7]);
+    bsLeft  : VertexList.SetVertexShowInList(false, [0, 3, 4, 7]);
 
     //
-    bsRight : VertexList.SetVertexHideList(false, [1, 2, 5, 6]);
+    bsRight : VertexList.SetVertexShowInList(false, [1, 2, 5, 6]);
 
     //
-    bsBottom: VertexList.SetVertexHideList(false, [2, 3, 6, 7]);
+    bsBottom: VertexList.SetVertexShowInList(false, [2, 3, 6, 7]);
   end;
 end;
 

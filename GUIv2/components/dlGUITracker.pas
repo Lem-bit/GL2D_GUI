@@ -371,6 +371,9 @@ begin
     if Assigned(FButton[i]) then
       FButton[i].Free;
 
+  if Assigned(FTrack) then
+    FreeAndNil(FTrack);
+
   inherited;
 end;
 

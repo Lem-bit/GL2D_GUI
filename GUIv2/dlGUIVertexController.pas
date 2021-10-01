@@ -56,7 +56,7 @@ type
       //Установить все координаты текстуры объекта в 1, 1
       procedure SetVertexTextureOne(pIndexOne: Integer = 0; pIndexStart: Integer = 0);
       //Установить видимость (показать/скрыть) только тем которые в списке (-1 - всем)
-      procedure SetVertexHideList(pHide: Boolean; pVertexIndexList: array of Integer);
+      procedure SetVertexShowInList(pShow: Boolean; pVertexIndexList: array of Integer);
       //Уничтожить класс
       destructor Destroy; override;
     public
@@ -133,7 +133,7 @@ begin
   TVertexClass(FVertexList.Items[pIndex]).Hide:= pHide;
 end;
 
-procedure TGUIVertexList.SetVertexHideList(pHide: Boolean; pVertexIndexList: array of Integer);
+procedure TGUIVertexList.SetVertexShowInList(pShow: Boolean; pVertexIndexList: array of Integer);
 
   //Проверим вхождение в список значения
   function ExistInList(pIndex: Integer): Boolean;
@@ -157,9 +157,9 @@ begin
 
   for i := 0 to FVertexList.Count - 1 do
     if ExistInList(i) then
-      TVertexClass(FVertexList.Items[i]).Hide:= pHide
+      TVertexClass(FVertexList.Items[i]).Hide:= not pShow
     else
-      TVertexClass(FVertexList.Items[i]).Hide:= not pHide;
+      TVertexClass(FVertexList.Items[i]).Hide:= pShow;
 end;
 
 procedure TGUIVertexList.SetVertexPos(pIndex: Integer; pX, pY: TFloat);

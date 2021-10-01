@@ -149,7 +149,7 @@ type
       property RGBConv     : Boolean read FRGBConvert   write FRGBConvert;
       property RGBMaskColor: TColor  read FRGBMaskColor write FRGBMaskColor;
     published
-      property Name: String read FName write FName;
+      property Name: String          read FName         write FName;
   end;
 
 //===========================================
@@ -189,6 +189,7 @@ type
     constructor Create(pColor: TColor); overload;
     constructor Create(pR, pG, pB: TFloat); overload;
     constructor Create(pR, pG, pB, pA: TFloat); overload;
+    destructor Destroy; override;
 
     //OpenGL команды
     class procedure glColor3fx(pColor: Integer); overload;
@@ -326,6 +327,7 @@ type
       property RenderPos: TFloat         read FCursorRenderPos write FCursorRenderPos;
     public
       constructor Create(pColor: TColor);
+      destructor Destroy; override;
       procedure ResetCursor;
       procedure Render;
   end;
@@ -450,13 +452,11 @@ end;
 
 constructor TGLColor.Create(pColor: TColor);
 begin
-  inherited Create;
   SetColor(pColor);
 end;
 
 constructor TGLColor.Create(pR, pG, pB: TFloat);
 begin
-  inherited Create;
   SetColor(pR, pG, pB);
 end;
 
@@ -479,8 +479,12 @@ end;
 
 constructor TGLColor.Create(pR, pG, pB, pA: TFloat);
 begin
-  inherited Create;
   SetColor(pR, pG, pB, pA);
+end;
+
+destructor TGLColor.Destroy;
+begin
+  inherited;
 end;
 
 function TGLColor.GetColor3: TGLColor3Arr;
@@ -639,8 +643,8 @@ end;
 
 destructor TVertexClass.Destroy;
 begin
-  if (Color <> nil) and Assigned(Color) then
-    Color.Free;
+  if Assigned(Color) then
+    FreeAndNil(Color);
 
   inherited;
 end;
@@ -800,6 +804,12 @@ begin
   FColor          := TGLColor.Create(pColor);
 end;
 
+destructor TGUICursor.Destroy;
+begin
+  FreeAndNil(FColor);
+  inherited;
+end;
+
 procedure TGUICursor.Render;
 begin
   if GetCurrentTime - FCursorTime > FWaitTime then
@@ -921,7 +931,7 @@ end;
 
 destructor TTextureLink.Destroy;
 begin
-  if not IsEmpty then
+  if (not IsEmpty) then
     glDeleteTextures(1, @Link);
 
   inherited;
@@ -929,7 +939,7 @@ end;
 
 function TTextureLink.IsEmpty: Boolean;
 begin
-  Result:= (Link = TEX_LINK_EMPTY);
+  Result:= (Link = TEX_LINK_EMPTY) and (Trim(FName) = '');
 end;
 
 { TGLColor3Rec }

@@ -197,7 +197,7 @@ type
       procedure SetFontEvent; override;
       procedure SetResize; override;
     public
-      constructor Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink);
+      constructor Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
       destructor Destroy; override;
 
       procedure OnMoveTracker(Sender: TObject; ParamObj: Pointer = nil);
@@ -223,7 +223,7 @@ implementation
 
 { TGUITableIntf }
 
-constructor TGUITable.Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink);
+constructor TGUITable.Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
 begin
   inherited Create(pName, gtcTable, pX, pY, 200, 200, pTextureLink);
 

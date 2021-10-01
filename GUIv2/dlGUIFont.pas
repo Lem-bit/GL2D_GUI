@@ -54,6 +54,8 @@ interface
    //Шрифт
    TGUIFontCharInfo = array[0..High(Byte)] of TGUIFontChar;
    TGUIFont = class(TPersistent)
+     strict private
+       FSelfTexture  : Boolean;
      private
        FName         : String[255]; //Название шрифта
        FSize         : Integer;   //Размер шрифта
@@ -75,9 +77,12 @@ interface
        FStatus       : TGUIFontStatus;
        FSetter       : TGUIFontSetterA;
      private
+       procedure FreeSelfTexture;
        procedure SetColor(pColor: TColor);
        function GetColor: TColor;
        procedure UpdateStatus(pStatus: TGUIFontSetter);
+       //
+       function GetHeight: TFloat;
      public
        constructor Create(pTextureLink: TTextureLink);
        destructor Destroy; override;
@@ -91,7 +96,6 @@ interface
        procedure CopyFrom(pFont: TGUIFont);
        procedure CopyMemoryFrom(pFont: TGUIFont);
        //Скопировать объект текстуры
-       procedure CopyTexture(pTextureLink: TTextureLink);
        procedure SetTextureLink(pTextureLink: TTextureLink);
        function GetTextureName: String;
        function GetTextureLink: TTextureLink;
@@ -99,9 +103,6 @@ interface
        //Получить макс кол-во символов в заданной ширине
        function GetTextWidthMax(pText: String; pMax: TFloat): Integer;
        function GetTextWidth(pText: String): TFloat;
-       //
-       function GetTextHeight: Integer;
-       function GetHeight: TFloat;
        //
        procedure GetTextRect(const pText: String; out pWidth, pHeight: Integer);
        //
@@ -144,7 +145,10 @@ end;
 procedure TGUIFont.CopyFrom(pFont: TGUIFont);
 begin
   if not Assigned(FTextureLink) then
-    Exit;
+  begin
+    FTextureLink:= TTextureLink.Create;
+    FSelfTexture:= True;
+  end;
 
   FTextureLink.CopyFrom(pFont.FTextureLink);
   LoadInfoFromFile(Copy(FTextureLink.FileName, 0, FTextureLink.FileName.Length - 4));
@@ -154,24 +158,23 @@ begin
   FSetter:= FSetter + [fsetTexture];
 end;
 
+procedure TGUIFont.SetTextureLink(pTextureLink: TTextureLink);
+begin
+  if not Assigned(pTextureLink) then
+    Exit;
+
+  //Класс сам создал эту текстуру это не ссылка нужно очистить (mem leak)
+  FreeSelfTexture;
+
+  FTextureLink:= pTextureLink;
+  LoadInfoFromFile(Copy(FTextureLink.FileName, 0, FTextureLink.FileName.Length - 4));
+
+  UpdateStatus(fsetTexture);
+end;
+
 procedure TGUIFont.CopyMemoryFrom(pFont: TGUIFont);
 begin
   CopyMemory(PGUIFont(Self), Pointer(pFont), TGUIFont.InstanceSize);
-end;
-
-procedure TGUIFont.CopyTexture(pTextureLink: TTextureLink);
-begin
-  if not Assigned(pTextureLink) then
-  begin
-    FreeAndNil(FTextureLink);
-    Exit;
-  end;
-
-  if not Assigned(FTextureLink) then
-    FTextureLink:= TTextureLink.Create;
-
-  FTextureLink.CopyFrom(pTextureLink);
-  UpdateStatus(fsetTexture);
 end;
 
 procedure TGUIFont.SetColor(pColor: TColor);
@@ -202,17 +205,6 @@ begin
   UpdateStatus(fsetScale);
 end;
 
-procedure TGUIFont.SetTextureLink(pTextureLink: TTextureLink);
-begin
-  if not Assigned(pTextureLink) then
-    Exit;
-
-  FTextureLink:= pTextureLink;
-  LoadInfoFromFile(Copy(FTextureLink.FileName, 0, FTextureLink.FileName.Length - 4));
-
-  UpdateStatus(fsetTexture);
-end;
-
 constructor TGUIFont.Create(pTextureLink: TTextureLink);
 begin
   FScale      := 1.0;
@@ -220,15 +212,28 @@ begin
   FColor      := TGLColor.Create;
   FStatus     := gfsNone;
   FSetter     := [];
-  FTextureLink:= TTextureLink.Create;
+  FTextureLink:= nil;//TTextureLink.Create;
   FColor.SetColor(clWhite);
   SetTextureLink(pTextureLink);
 end;
 
 destructor TGUIFont.Destroy;
 begin
+  FreeSelfTexture;
   FreeAndNil(FColor);
   inherited;
+end;
+
+procedure TGUIFont.FreeSelfTexture;
+begin
+  if not Assigned(FTextureLink) then
+    Exit;
+
+  if FSelfTexture then
+  begin
+    FreeAndNil(FTextureLink);
+    FSelfTexture:= False;
+  end;
 end;
 
 function TGUIFont.GetColor: TColor;
@@ -239,11 +244,6 @@ end;
 function TGUIFont.GetHeight: TFloat;
 begin
   Result:= FScale * FHeight;
-end;
-
-function TGUIFont.GetTextHeight: Integer;
-begin
-  Result:= FHeight;
 end;
 
 procedure TGUIFont.GetTextRect(const pText: String; out pWidth, pHeight: Integer);
@@ -352,7 +352,6 @@ begin
 
   if not Assigned(FTextureLink) then
     Exit;
-
 
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
