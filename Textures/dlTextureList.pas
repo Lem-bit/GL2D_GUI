@@ -142,6 +142,7 @@ end;
 
 function TTextureList.Delete(const AName: String): Boolean;
 var id : Integer;
+    Item: TTextureLink;
 begin
   Result:= False;
   try
@@ -150,7 +151,12 @@ begin
     if not IndexOf(id) then
       Exit;
 
-    TTextureLink(FItem[id]).Free;
+    Item:= TTextureLink(FItem[id]);
+
+    if not Item.IsEmpty then
+      glDeleteTextures(1, @Item.Link);
+    Item.Free;
+
     FItem[id]:= nil;
     FItem.Pack;
 
@@ -160,10 +166,16 @@ end;
 
 destructor TTextureList.Destroy;
 var i: integer;
+    Item: TTextureLink;
 begin
   if Assigned(FItem) then
     for i := 0 to FItem.Count - 1 do
+    begin
+      Item:= TTextureLink(FItem[i]);
+      if not Item.IsEmpty then
+        glDeleteTextures(1, @Item.Link);
       TTextureLink(FItem[i]).Free;
+    end;
 
   FreeAndNil(FItem);
   FreeAndNil(FLoader);

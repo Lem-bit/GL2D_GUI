@@ -8,15 +8,15 @@ uses SysUtils, Classes, Graphics, dlGUITypes, dlGUIObject, dlGUIPaletteHelper, d
   ====================================================
   = Delphi OpenGL GUIv2                              =
   =                                                  =
-  = Author: Ansperi L.L., 2021                       =
-  = Email : gui_proj@mail.ru                         =
-  = Site  : lemgl.ru                                 =
+  = Author  : Ansperi L.L., 2021                     =
+  = Email   : gui_proj@mail.ru                       =
+  = Site    : lemgl.ru                               =
+  = Telegram: https://t.me/delphi_lemgl              =
   =                                                  =
   ====================================================
 }
 
 type
-  TGUITrackerStyle = (tsVertical, tsHorizontal);
   TGUITracker = class(TGUIObject)
   private
     const BTN_UPL = 1; //Кнопка 1
@@ -28,7 +28,7 @@ type
     FTrack       : TGUIImage;
     FTrackOffsetX: Integer; //
     FTrackOffsetY: Integer; //
-    FStyle       : TGUITrackerStyle; //Стиль прорисовки
+    FStyle       : TGUIOrientation; //Стиль прорисовки
     FDownColor   : TColor;  //Цвет при нажатии на элемент управления
     FShowTrack   : Boolean; //Показывать трекер
 
@@ -62,7 +62,7 @@ type
     OnMinValue: TGUIProc; //Минимальное значение
     OnMaxValue: TGUIProc; //Максимальное значение
   public
-    constructor Create(pLeft, pTop, pWidth, pHeight: Integer; pTrackerStyle: TGUITrackerStyle; pTextureLink: TTextureLink = nil);
+    constructor Create(pLeft, pTop, pWidth, pHeight: Integer; pTrackerStyle: TGUIOrientation; pTextureLink: TTextureLink = nil);
     destructor Destroy; override;
     procedure SetTextureLink(pTextureLink: TTextureLink); override;
 
@@ -160,11 +160,11 @@ begin
   Result:= 0;
 
   case FStyle of
-    tsVertical  : Result:= Round(
+    goVertical  : Result:= Round(
                         {Стартовая позиция} GetObjPosY(TRK_OBJ) +
                         {Позиция трекера} ((GetMaxHeight / MaxValue) * FCurrValue)
                        );
-    tsHorizontal: Result:= Round(
+    goHorizontal: Result:= Round(
                         {Стартовая позиция} GetObjPosX(TRK_OBJ) +
                         {Позиция трекера} ((GetMaxWidth / MaxValue) * FCurrValue)
                        );
@@ -178,13 +178,13 @@ begin
   Result:= 0;
 
   case FStyle of
-    tsVertical  : begin
+    goVertical  : begin
                     //Процентное соотношение трекера ко всей высоте (для трекера)
                     Persent:= ((FTrack.Y - Y - FSize) / GetMaxHeight) * 100;
                     //Процентное соотношение * Макс кол-во элементов
                     Result := Round((MaxValue / 100) * Persent);
                   end;
-    tsHorizontal: begin
+    goHorizontal: begin
                     Persent:= ((FTrack.X - X - FSize) / GetMaxWidth) * 100;
                     Result := Round((MaxValue / 100) * Persent);
                   end;
@@ -238,13 +238,13 @@ begin
     Exit;
 
   case FStyle of
-    tsVertical: begin
+    goVertical: begin
       SetTrackPos(Y + Trunc((pY - Y) - (FSize / 2)) );
       SetValue(GetTrackerPos); {*}
       FTrackOffsetY:= pY - FTrack.Y;
     end;
 
-    tsHorizontal: begin
+    goHorizontal: begin
       SetTrackPos(X + Trunc((pX - X) - (FSize / 2)) );
       SetValue(GetTrackerPos); {*}
       FTrackOffsetX:= pX - FTrack.X;
@@ -289,11 +289,11 @@ begin
 
     if (goaDown in FTrack.GetAction) then
       case FStyle of
-        tsVertical  : begin
+        goVertical  : begin
                         SetTrackPos(pY - FTrackOffsetY);
                         SetValue(Round(GetTrackerPos));
                       end;
-        tsHorizontal: begin
+        goHorizontal: begin
                         SetTrackPos(pX - FTrackOffsetX);
                         SetValue(Round(GetTrackerPos));
                       end;
@@ -306,7 +306,7 @@ begin
       FButton[i].OnMouseMove(pX, pY);
 end;
 
-constructor TGUITracker.Create(pLeft, pTop, pWidth, pHeight: Integer; pTrackerStyle: TGUITrackerStyle; pTextureLink: TTextureLink);
+constructor TGUITracker.Create(pLeft, pTop, pWidth, pHeight: Integer; pTrackerStyle: TGUIOrientation; pTextureLink: TTextureLink);
 var i: integer;
     imgOff: integer;
 begin
@@ -325,12 +325,12 @@ begin
   SetTextureLink(pTextureLink);
 
   case FStyle of
-    tsVertical  : begin
+    goVertical  : begin
       FSize := pWidth;
       imgOff:= 0;
     end;
 
-    tsHorizontal: begin
+    goHorizontal: begin
       FSize := pHeight;
       imgOff:= High(FButton);
     end;
@@ -351,7 +351,7 @@ begin
   FButton[BTN_DNR].OnClick:= ButtonDnRightClick;
 
   //Трекер
-  if FStyle <> tsHorizontal then
+  if FStyle <> goHorizontal then
     imgOff:= 0
   else
     imgOff:= 1;
@@ -382,7 +382,7 @@ begin
   Result:= 0;
 
   case FStyle of
-    tsVertical:
+    goVertical:
       case pObjIndex of
         BTN_UPL: Result:= X;
         BTN_DNR: Result:= X;
@@ -390,7 +390,7 @@ begin
       end;
 
     //Горизонтальный
-    tsHorizontal:
+    goHorizontal:
       case pObjIndex of
         BTN_UPL: Result:= X;
         BTN_DNR: Result:= X + Width - FSize;
@@ -404,7 +404,7 @@ begin
   Result:= 0;
 
   case FStyle of
-    tsVertical:
+    goVertical:
       case pObjIndex of
         BTN_UPL: Result:= Y;
         BTN_DNR: Result:= Y + Height - FSize;
@@ -412,7 +412,7 @@ begin
       end;
 
     //Горизонтальный
-    tsHorizontal:
+    goHorizontal:
       case pObjIndex of
         BTN_UPL: Result:= Y;
         BTN_DNR: Result:= Y;
@@ -462,7 +462,7 @@ begin
   //Возвращаем результат максимальной ширины/высоты для вывода данных с учетом размера трекера
 
   case FStyle of
-    tsVertical  : begin
+    goVertical  : begin
         SetRect(
                  pRect.X + pRect.Width - FSize - pBorderSize,
                  pRect.Y + pBorderSize,
@@ -478,7 +478,7 @@ begin
         SetTrackerPosByValue(FCurrValue);
     end;
 
-    tsHorizontal: begin
+    goHorizontal: begin
         SetRect(pRect.X + pBorderSize,
                 pRect.Y + pRect.Height - pBorderSize - FSize,
                 pRect.Width - (pBorderSize * 2),
@@ -535,8 +535,8 @@ procedure TGUITracker.SetTrackerPosByValue(pValue: Integer);
 begin
 
   case FStyle of
-    tsVertical  : SetTrackPos(GetCurrPoint);
-    tsHorizontal: SetTrackPos(GetCurrPoint);
+    goVertical  : SetTrackPos(GetCurrPoint);
+    goHorizontal: SetTrackPos(GetCurrPoint);
   end;
 
 end;
@@ -546,14 +546,14 @@ begin
   if Hide then
   begin
     case FStyle of
-      tsVertical  : FTrack.Y:= 0;
-      tsHorizontal: FTrack.X:= 0;
+      goVertical  : FTrack.Y:= 0;
+      goHorizontal: FTrack.X:= 0;
     end;
     Exit;
   end;
 
   case FStyle of
-    tsVertical:
+    goVertical:
     begin
       //Верхняя граница
       if pValue < Y + FSize then
@@ -576,7 +576,7 @@ begin
       FTrack.Y:= pValue;
     end;
 
-    tsHorizontal:
+    goHorizontal:
     begin
       if pValue < X + FSize then
       begin
@@ -664,8 +664,8 @@ end;
 
 procedure TGUITrackerIntf.CreateTrackers;
 begin
-  FTracker[V_TR]:= TGUITracker.Create(Width - W_TR, 1, W_TR, Height - 2, tsVertical);
-  FTracker[H_TR]:= TGUITracker.Create(1, Height - W_TR, Width - 2, W_TR, tsHorizontal);
+  FTracker[V_TR]:= TGUITracker.Create(Width - W_TR, 1, W_TR, Height - 2, goVertical);
+  FTracker[H_TR]:= TGUITracker.Create(1, Height - W_TR, Width - 2, W_TR, goHorizontal);
 end;
 
 destructor TGUITrackerIntf.Destroy;

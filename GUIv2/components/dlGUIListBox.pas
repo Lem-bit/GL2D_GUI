@@ -9,9 +9,10 @@ uses SysUtils, Classes, Graphics, dlOpenGL, dlGUITypes, dlGUIObject, dlGUIPalett
   ====================================================
   = Delphi OpenGL GUIv2                              =
   =                                                  =
-  = Author: Ansperi L.L., 2021                       =
-  = Email : gui_proj@mail.ru                         =
-  = Site  : lemgl.ru                                 =
+  = Author  : Ansperi L.L., 2021                     =
+  = Email   : gui_proj@mail.ru                       =
+  = Site    : lemgl.ru                               =
+  = Telegram: https://t.me/delphi_lemgl              =
   =                                                  =
   ====================================================
 }
@@ -82,6 +83,7 @@ type
     procedure SetHide(pHide: Boolean); override;
   public
     constructor Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
+    destructor Destroy; override;
 
     procedure OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton); override;
     procedure OnMouseUp(pX, pY: Integer; Button: TGUIMouseButton); override;
@@ -90,7 +92,6 @@ type
     procedure OnMouseWheelDown(Shift: TShiftState; MPosX, MPosY: Integer); override;
 
     procedure SetTextureLink(pTextureLink: TTextureLink); override;
-    destructor Destroy; override;
 
     procedure Render; override;
   public
@@ -256,6 +257,7 @@ begin
   FXOffset      := 0;
   FLineSpacing  := 0;
   FItem         := TList.Create;
+  FItem.Capacity:= 10000;
   FBrushColor   := $00202020;
 
   SetRect(pX, pY, 200, 200);

@@ -8,9 +8,10 @@ uses Graphics, Classes, Windows, SysUtils, dlOpenGL;
   ====================================================
   = Delphi OpenGL GUIv2                              =
   =                                                  =
-  = Author: Ansperi L.L., 2021                       =
-  = Email : gui_proj@mail.ru                         =
-  = Site  : lemgl.ru                                 =
+  = Author  : Ansperi L.L., 2021                     =
+  = Email   : gui_proj@mail.ru                       =
+  = Site    : lemgl.ru                               =
+  = Telegram: https://t.me/delphi_lemgl              =
   =                                                  =
   ====================================================
 }
@@ -24,6 +25,7 @@ type
   //Передать параметр @Value, Получить параметр PInteger(ParamObj)^
   TGUIProc = procedure(Sender: TObject; ParamObj: Pointer = nil) of Object;
   TGUIMouseButton = (gmbLeft, gmbRight, gmbMiddle);
+  TGUIOrientation = (goHorizontal, goVertical);
 
 //Переназначение стандартных типов
 type
@@ -931,8 +933,10 @@ end;
 
 destructor TTextureLink.Destroy;
 begin
-  if (not IsEmpty) then
-    glDeleteTextures(1, @Link);
+//Не нужно тут текстуру удалять, она не создается этим классом
+//Удаление перенесено в TextureList
+//  if (not IsEmpty) then
+//    glDeleteTextures(1, @Link);
 
   inherited;
 end;

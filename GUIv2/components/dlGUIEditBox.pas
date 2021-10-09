@@ -2,16 +2,17 @@
 
 interface
 
-uses SysUtils, Windows, Graphics, Classes, dlOpenGL, dlGUITypes, dlGUIObject, dlGUIPaletteHelper,
+uses SysUtils, Clipbrd, Windows, Graphics, Classes, dlOpenGL, dlGUITypes, dlGUIObject, dlGUIPaletteHelper,
   dlGUIFont;
 
 {
   ====================================================
   = Delphi OpenGL GUIv2                              =
   =                                                  =
-  = Author: Ansperi L.L., 2021                       =
-  = Email : gui_proj@mail.ru                         =
-  = Site  : lemgl.ru                                 =
+  = Author  : Ansperi L.L., 2021                     =
+  = Email   : gui_proj@mail.ru                       =
+  = Site    : lemgl.ru                               =
+  = Telegram: https://t.me/delphi_lemgl              =
   =                                                  =
   ====================================================
 }
@@ -78,6 +79,10 @@ type
   end;
 
   TGUIEditBox = class(TGUIObject)
+    strict private const
+      VK_COPY_KEY  = 'C'; //CTRL + C
+      VK_PASTE_KEY = 'V'; //CTRL + V
+      VK_CUT_KEY   = 'X'; //CTRL + X
     strict private
       FOffsetX    : Integer; //Сдвиг текста
 
@@ -116,6 +121,9 @@ type
     protected
       procedure SetFontEvent; override;
       procedure SetResize; override;
+    public
+      OnCopy : TGUIProc;
+      OnPaste: TGUIProc;
     public
       constructor Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
       destructor Destroy; override;
@@ -201,6 +209,9 @@ end;
 
 procedure TGUIEditBox.DeleteSelection;
 begin
+  if not FSelection.OnSelect then
+    Exit;
+
   FSelection.Calc;
   Delete(FText, FSelection.GetCurrentStartPos, FSelection.GetCurrentEndPos);
 
@@ -307,6 +318,44 @@ begin
   if not Focused then
     Exit;
 
+  //Копировать при ReadOnly можно
+  if ssCtrl in Shift then
+    if SameText(AnsiUpperCase(String(AnsiChar(Key))), VK_COPY_KEY) then
+    begin
+      if Assigned(OnCopy) then
+        OnCopy(Self, nil);
+
+      Clipboard.AsText:= FSelection.Text;
+    end;
+
+  //Вставлять и печатать при ReadOnly нельзя
+  if ReadOnly then
+    Exit;
+
+  //Вырезать
+  if ssCtrl in Shift then
+    if SameText(AnsiUpperCase(String(AnsiChar(Key))), VK_CUT_KEY)  then
+    begin
+      Clipboard.AsText:= FSelection.Text;
+      DeleteSelection;
+    end;
+
+  //Вставить
+  if ssCtrl in Shift then
+    if SameText(AnsiUpperCase(String(AnsiChar(Key))), VK_PASTE_KEY)  then
+    begin
+      if ReadOnly then
+        Exit;
+
+      if Assigned(OnPaste) then
+        OnPaste(Self, nil);
+
+      DeleteSelection;
+      Insert(Clipboard.AsText, FText, FCursor.CharPos + FOffsetX);
+      SetCursorPos(FCursor.CharPos + Length(Clipboard.AsText));
+      Exit;
+    end;
+
   if (FSelection.OnSelect) or (ssShift in Shift) then
     DoKeyDownSelected(Key, Shift)
   else
@@ -362,13 +411,22 @@ begin
 end;
 
 procedure TGUIEditBox.OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton);
+var Index: integer;
 begin
   inherited;
 
   //Показываем курсор
   FCursor.ResetCursor;
-  FSelection.Cancel;
 
+  if Button <> gmbLeft then
+  begin
+    Index:= CharPosByCoord(pX);
+    if (Index > FSelection.SelStart) and
+       (Index < FSelection.SelEnd) then
+    Exit;
+  end;
+
+  FSelection.Cancel;
   SetCursorPos(CharPosByCoord(pX));
 
   if not (goaFocused in GetAction) then
@@ -382,6 +440,10 @@ end;
 procedure TGUIEditBox.OnMouseMove(pX, pY: Integer);
 begin
   inherited;
+
+  if Assigned(PopupMenu) then
+    if goaDown in PopupMenu.GetAction then
+      Exit;
 
   if not (goaFocused in GetAction) then
     Exit;
@@ -403,11 +465,18 @@ procedure TGUIEditBox.OnMouseUp(pX, pY: Integer; Button: TGUIMouseButton);
 begin
   inherited;
 
+  if Button <> gmbLeft then
+    Exit;
+
   if not (goaFocused in GetAction) then
     Exit;
 
   if not FSelection.OnSelect then
     Exit;
+
+  if Assigned(PopupMenu) then
+    if goaDown in PopupMenu.GetAction then
+      Exit;
 
   SetCursorPos(CharPosByCoord(pX));
   FSelection.SelEnd := FCursor.CharPos + FOffsetX;
@@ -425,7 +494,8 @@ begin
   end;
 
   if not (goaFocused in GetAction) then
-    FSelection.Cancel;
+    if FSelection.OnSelect then
+      FSelection.Cancel;
 
   FSelection.Calc;
   FSelection.Render;
@@ -707,7 +777,7 @@ end;
 
 procedure TGUIEditBoxSelection.SetText(const AText: String);
 begin
-  FText:= AText + ', length: ' + Length(AText).ToString;
+  FText:= AText;
 end;
 
 end.

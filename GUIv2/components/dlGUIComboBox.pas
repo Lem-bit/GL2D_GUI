@@ -8,9 +8,10 @@ uses Classes, SysUtils, dlGUITypes, dlGUIObject, dlGUIEditBox, dlGUIButton, dlGU
   ====================================================
   = Delphi OpenGL GUIv2                              =
   =                                                  =
-  = Author: Ansperi L.L., 2021                       =
-  = Email : gui_proj@mail.ru                         =
-  = Site  : lemgl.ru                                 =
+  = Author  : Ansperi L.L., 2021                     =
+  = Email   : gui_proj@mail.ru                       =
+  = Site    : lemgl.ru                               =
+  = Telegram: https://t.me/delphi_lemgl              =
   =                                                  =
   ====================================================
 }
