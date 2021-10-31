@@ -89,6 +89,9 @@ end;
 procedure TGUICheckBox.OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton);
 begin
   inherited;
+  if not OnHit(pX, pY) then
+    Exit;
+
   if Button <> gmbLeft then
     Exit;
 

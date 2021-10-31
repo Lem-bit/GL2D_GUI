@@ -27,7 +27,7 @@ uses RTTI, Classes, Graphics, SysUtils, dlOpenGL, dlGUITypes, dlGUITypesRTTI, dl
    end;
 
    TGUITypeComponent = (gtcObject, gtcForm, gtcButton, gtcPopupMenu, gtcCheckBox, gtcLabel, gtcImage, gtcProgressBar,
-     gtcEditBox, gtcTrackBar, gtcListBox, gtcRadioButton, gtcBevel, gtcComboBox, gtcPanel, gtcTable);
+     gtcEditBox, gtcTrackBar, gtcListBox, gtcRadioButton, gtcBevel, gtcComboBox, gtcPanel, gtcTable, gtcMainMenu);
 
  //Имена компонентов по умолчанию
  const
@@ -47,7 +47,8 @@ uses RTTI, Classes, Graphics, SysUtils, dlOpenGL, dlGUITypes, dlGUITypesRTTI, dl
       (Name: 'Bevel'),
       (Name: 'ComboBox'),
       (Name: 'Panel'),
-      (Name: 'Table')
+      (Name: 'Table'),
+      (Name: 'MainMenu')
      );
 
 type
@@ -66,6 +67,7 @@ type
                         goaTextureNeedRecalc,   //Нужно пересчитать координаты текстуры
                         goaTextureAlwaysRecalc, //Всегда пересчитываем текстуру
                         goaItemSelect,          //Выбрали элемент (у ListBox например)
+                        goaItemClick,           //Нажали на элемент
                         goaWhell,               //Сработала прокрутка
                         goaUpdateSize           //Поменялись размеры
                       );
@@ -120,35 +122,35 @@ type
    //Объект от которого наследуются компоненты
    TGUIObject = class(TPersistent)
      private
-       FName       : String; //Название объекта
-       FDefName    : String; //Имя данное автоматически (для подставки ID, SetID())
-       FType       : TGUITypeComponent; //Тип компонента
+       FName        : String; //Название объекта
+       FDefName     : String; //Имя данное автоматически (для подставки ID, SetID())
+       FType        : TGUITypeComponent; //Тип компонента
      protected
-       FUID        : Integer; //Номер объекта в листе
+       FUID         : Integer; //Номер объекта в листе
      protected
-       FRect       : TGUIObjectRect; //Позиция и размеры
-       FTextOffset : TGUIObjectRect; //Положение текста
-       FHide       : Boolean; //Видимость
-       FEnable     : Boolean; //Активный компонент или нет
-       FAction     : TGUIObjectAction; //Действия над объектом
+       FRect        : TGUIObjectRect; //Позиция и размеры
+       FTextOffset  : TGUIObjectRect; //Положение текста
+       FHide        : Boolean; //Видимость
+       FEnable      : Boolean; //Активный компонент или нет
+       FAction      : TGUIObjectAction; //Действия над объектом
      protected
-       FHint       : TGUIHintObject; //Всплывающая подсказка
+       FHint        : TGUIHintObject; //Всплывающая подсказка
      protected
-       FTextureInfo: TGUITextureInfo; //Информация о размерах текстуры
+       FTextureInfo : TGUITextureInfo; //Информация о размерах текстуры
      private
-       FTextureLink: TTextureLink; //Ссылка на текстуру
+       FTextureLink : TTextureLink; //Ссылка на текстуру
      protected
-       FScale      : TFloat; //Увеличение
-       FFont       : TGUIFont; //Шрифт
-       FBlend      : TBlendParam; //Смешивание цветов
-       FColor      : TGLColor; //Цвет
-       FModeDraw   : TUInt; //Режим прорисовки
+       FScale       : TFloat; //Увеличение
+       FFont        : TGUIFont; //Шрифт
+       FBlend       : TBlendParam; //Смешивание цветов
+       FColor       : TGLColor; //Цвет
+       FModeDraw    : TUInt; //Режим прорисовки
      protected
-       FParent     : TGUIObject; //Родитель объекта
-       FPopupMenu  : TGUIObject; //Выпадающий список
-       FArea       : TGUITypeArea; //Рамка при наведении
+       FParent      : TGUIObject; //Родитель объекта
+       FPopupMenu   : TGUIObject; //Выпадающий список
+       FArea        : TGUITypeArea; //Рамка при наведении
      protected
-       FVertexList : TGUIVertexList; //Список вершин
+       FVertexList  : TGUIVertexList; //Список вершин
      protected
        //Событие при изменении шрифта
        procedure SetFontEvent; virtual;
@@ -177,6 +179,7 @@ type
        procedure SetAction(pAction: TGUIObjectAction);
        procedure RemoveAction(pAction: TGUIObjectAction);
        function GetAction: TGUIObjectAction;
+       function ObjectInAction(pAction: array of TGUIActionSetter; pCheckOr: Boolean = True): Boolean;
      public
        //Узнать позицию родителя (нужно для отрисовки компонента на форме)
        function GetParentPos: TCoord2D;
@@ -630,6 +633,29 @@ begin
     Result:= FTextureLink.Name;
 end;
 
+function TGUIObject.ObjectInAction(pAction: array of TGUIActionSetter; pCheckOr: Boolean = True): Boolean;
+var i: integer;
+    All: Boolean;
+begin
+  Result:= False;
+
+  if Length(pAction) < 1 then
+    Exit;
+
+  for i := 0 to High(pAction) do
+    if pCheckOr then
+    begin
+      if pAction[i] in FAction then
+        Exit(True)
+    end
+    else
+     //Если проверяем по And
+     if pAction[i] in FAction then
+       Result:= True
+     else
+       Exit(false);
+end;
+
 procedure TGUIObject.OnDeactivate(Sender: TGUIObject);
 begin
   if Assigned(FArea) then
@@ -643,9 +669,11 @@ begin
   if Hide then
     Exit;
 
-  if (pX >= FRect.X) and (pY >= FRect.Y) and
-     (pX <= FRect.X + FRect.Width) and (pY <= FRect.Y + FRect.Height) then
-     Result:= True;
+  Result:=
+     (pX >= FRect.X) and
+     (pY >= FRect.Y) and
+     (pX <= FRect.X + FRect.Width) and
+     (pY <= FRect.Y + FRect.Height);
 end;
 
 procedure TGUIObject.AfterObjRender;

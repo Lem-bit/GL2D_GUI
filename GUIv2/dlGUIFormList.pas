@@ -2,7 +2,8 @@
 
 interface
 
-  uses Messages, Classes, Controls, Windows, SysUtils, dlGUITypes, dlGUIObject, dlGUIForm;
+  uses Messages, Classes, Controls, Windows, SysUtils, dlGUITypes, dlGUIObject, dlGUIForm,
+   dlGUIMainMenu;
 
 {
   ====================================================
@@ -27,10 +28,12 @@ interface
        FLastMousePos: TPoint;
 
        FMouseDown   : Boolean;
+       FMainMenu    : TGUIMainMenu;
      private
        function IsExists(pNum: integer): Boolean;
        procedure CurrentFormDeactivate;
        function CurrentFormAccessible: Boolean;
+       function ConvertMouseButton(MouseButton: TMouseButton): TGUIMouseButton;
      public
        function Count: Integer;
      public
@@ -83,6 +86,7 @@ interface
 
        function WndProc(var AMessage: TMessage): Boolean;
      public
+       property MainMenu: TGUIMainMenu         read FMainMenu write FMainMenu;
        property Form[index: integer]: TGUIForm read GetForm;
    end;
 
@@ -131,6 +135,9 @@ begin
     for i := FFormList.Count - 1 downto 0 do
       TGUIForm(FFormList[i]).Free;
 
+  if Assigned(FMainMenu) then
+    FreeAndNil(FMainMenu);
+
   FreeAndNil(FFormList);
   inherited;
 end;
@@ -152,6 +159,18 @@ begin
     FFormList.Items[index]:= nil;
     Result:= True;
   end;
+end;
+
+function TGUIFormList.ConvertMouseButton(MouseButton: TMouseButton): TGUIMouseButton;
+begin
+  Result:= gmbNone;
+
+  case MouseButton of
+    mbLeft  : Result:= gmbLeft;
+    mbRight : Result:= gmbRight;
+    mbMiddle: Result:= gmbMiddle;
+  end;
+
 end;
 
 function TGUIFormList.Count: Integer;
@@ -263,26 +282,36 @@ begin
 end;
 
 function TGUIFormList.OnMouseDoubleClick(pX, pY: Integer; Button: TMouseButton): Boolean;
+var MButton: TGUIMouseButton;
 begin
   Result:= False;
 
   if not CurrentFormAccessible then
     Exit;
 
-  case Button of
-    mbLeft : GetCurrentWindow.OnMouseDoubleClick(pX, pY, gmbLeft);
-    mbRight: GetCurrentWindow.OnMouseDoubleClick(pX, pY, gmbRight);
-  end;
+  MButton:= ConvertMouseButton(Button);
+  GetCurrentWindow.OnMouseDoubleClick(pX, pY, MButton);
 
   Result:= True;
 end;
 
 function TGUIFormList.OnMouseDown(pX, pY: Integer; Button: TMouseButton): Boolean;
+var MButton: TGUIMouseButton;
 begin
- // if Button = mbLeft then
-    FMouseDown:= True;
+  FMouseDown:= True;
+  Result    := False;
+  MButton   := ConvertMouseButton(Button);
 
-  Result:= False;
+  if Assigned(FMainMenu) then
+  begin
+    FMainMenu.OnMouseDown(pX, pY, MButton);
+
+    if FMainMenu.ObjectInAction([goaFocused]) then
+    begin
+      CurrentFormDeactivate;
+      Exit;
+    end
+  end;
 
   if not OnHit(pX, pY) then
     Exit;
@@ -290,11 +319,7 @@ begin
   if not CurrentFormAccessible then
     Exit;
 
-  case Button of
-    mbLeft : GetCurrentWindow.OnMouseDown(pX, pY, gmbLeft);
-    mbRight: GetCurrentWindow.OnMouseDown(pX, pY, gmbRight);
-  end;
-
+  GetCurrentWindow.OnMouseDown(pX, pY, MButton);
   Result:= True;
 end;
 
@@ -302,28 +327,40 @@ function TGUIFormList.OnMouseMove(pX, pY: Integer): Boolean;
 begin
   Result:= False;
 
+  if Assigned(FMainMenu) then
+  begin
+    FMainMenu.OnMouseMove(pX, pY);
+    if goaFocused in FMainMenu.GetAction then
+      Exit;
+  end;
+
   if not CurrentFormAccessible then
     Exit;
 
   GetCurrentWindow.OnMouseMove(pX, pY);
+
   Result:= True;
 end;
 
 function TGUIFormList.OnMouseUp(pX, pY: Integer; Button: TMouseButton): Boolean;
+var MButton: TGUIMouseButton;
 begin
- // if Button = mbLeft then
-    FMouseDown:= False;
+  FMouseDown:= False;
+  MButton   := ConvertMouseButton(Button);
+  Result    := False;
 
-  Result:= False;
+  if Assigned(FMainMenu) then
+    if FMainMenu.ObjectInAction([goaFocused, goaItemClick]) then
+    begin
+      FMainMenu.OnMouseUp(pX, pY, MButton);
+      Exit;
+    end;
 
   //Не будем проверять OnHit т.к. надо будет всем компонентам отправить MouseUp
   if not CurrentFormAccessible then
     Exit;
 
-  case Button of
-    mbLeft : GetCurrentWindow.OnMouseUp(pX, pY, gmbLeft);
-    mbRight: GetCurrentWindow.OnMouseUp(pX, pY, gmbRight);
-  end;
+  GetCurrentWindow.OnMouseUp(pX, pY, MButton);
 
   Result:= True;
 end;
@@ -356,6 +393,10 @@ begin
       Continue
     else
       TGUIForm(FFormList.Items[FID]).Render;
+
+  if Assigned(FMainMenu) then
+    FMainMenu.Render;
+
 end;
 
 procedure TGUIFormList.SetActive(pFormID: Integer);

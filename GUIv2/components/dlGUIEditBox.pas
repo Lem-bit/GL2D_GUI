@@ -69,6 +69,10 @@ type
       constructor Create(const AParent: TGUIObject);
       destructor Destroy; override;
 
+      procedure StartSelection(AOffset, ACurrentCursorPos: Integer);
+      procedure MoveSelection(AEndPosition: Integer);
+      procedure EndSelection(AEndPosition: Integer);
+
       procedure Calc;
       procedure Render;
       procedure Cancel;
@@ -420,9 +424,10 @@ begin
 
   if Button <> gmbLeft then
   begin
-    Index:= CharPosByCoord(pX);
-    if (Index > FSelection.SelStart) and
-       (Index < FSelection.SelEnd) then
+    Index:= CharPosByCoord(pX) + FOffsetX;
+
+    if (Index >= FSelection.GetCurrentStartPos) and
+       (Index <= FSelection.GetCurrentStartPos + FSelection.GetCurrentEndPos) then
     Exit;
   end;
 
@@ -432,9 +437,8 @@ begin
   if not (goaFocused in GetAction) then
     Exit;
 
-  //Предполагаем что может начаться выделение текста
-  FSelection.SelStart   := FCursor.CharPos; //индекс
-  FSelection.StartOffset:= FOffsetX;
+  //Предполагаем что может начаться выбор текста
+  FSelection.StartSelection(FOffsetX, FCursor.CharPos);
 end;
 
 procedure TGUIEditBox.OnMouseMove(pX, pY: Integer);
@@ -452,13 +456,11 @@ begin
   if not (goaDown in GetAction) then
     Exit;
 
-  FSelection.OnSelect:= True;
-
   if (pX < Rect.X) then
     SetCursorPos(FCursor.CharPos - 1);
 
   SetCursorPos(CharPosByCoord(pX));
-  FSelection.SelEnd := FCursor.CharPos + FOffsetX;
+  FSelection.MoveSelection(FCursor.CharPos + FOffsetX);
 end;
 
 procedure TGUIEditBox.OnMouseUp(pX, pY: Integer; Button: TGUIMouseButton);
@@ -479,7 +481,7 @@ begin
       Exit;
 
   SetCursorPos(CharPosByCoord(pX));
-  FSelection.SelEnd := FCursor.CharPos + FOffsetX;
+  FSelection.EndSelection(FCursor.CharPos + FOffsetX);
 end;
 
 procedure TGUIEditBox.Render;
@@ -499,9 +501,6 @@ begin
 
   FSelection.Calc;
   FSelection.Render;
-
-  Hint.Enable:= True;
-  Hint.Text:= FSelection.Text;
 
   if not Enable then
     Exit;
@@ -737,6 +736,11 @@ begin
   inherited;
 end;
 
+procedure TGUIEditBoxSelection.EndSelection(AEndPosition: Integer);
+begin
+  SelEnd  := AEndPosition;
+end;
+
 function TGUIEditBoxSelection.GetCurrentEndPos: integer;
 begin
   Result:= FCurrSEPos[END_POS];
@@ -745,6 +749,12 @@ end;
 function TGUIEditBoxSelection.GetCurrentStartPos: Integer;
 begin
   Result:= FCurrSEPos[START_POS];
+end;
+
+procedure TGUIEditBoxSelection.MoveSelection(AEndPosition: Integer);
+begin
+  OnSelect:= True;
+  EndSelection(AEndPosition);
 end;
 
 procedure TGUIEditBoxSelection.Render;
@@ -778,6 +788,12 @@ end;
 procedure TGUIEditBoxSelection.SetText(const AText: String);
 begin
   FText:= AText;
+end;
+
+procedure TGUIEditBoxSelection.StartSelection(AOffset, ACurrentCursorPos: Integer);
+begin
+  FStartOffset:= AOffset;
+  FSelStart   := ACurrentCursorPos;
 end;
 
 end.

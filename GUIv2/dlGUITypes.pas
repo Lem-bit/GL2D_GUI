@@ -24,7 +24,7 @@ type
   //Процедура для объекта Sender - объект, ParamObj - указатель на параметры
   //Передать параметр @Value, Получить параметр PInteger(ParamObj)^
   TGUIProc = procedure(Sender: TObject; ParamObj: Pointer = nil) of Object;
-  TGUIMouseButton = (gmbLeft, gmbRight, gmbMiddle);
+  TGUIMouseButton = (gmbNone, gmbLeft, gmbRight, gmbMiddle);
   TGUIOrientation = (goHorizontal, goVertical);
 
 //Переназначение стандартных типов
@@ -589,8 +589,11 @@ end;
 
 procedure TGUITypeArea.Render;
 begin
-  if not FShow then Exit;
-  if not FVisible then Exit;
+  if not FShow then
+    Exit;
+
+  if not FVisible then
+    Exit;
 
   glDisable(GL_TEXTURE_2D);
 
@@ -623,6 +626,9 @@ end;
 
 procedure TGUITypeArea.SetVisible(Value: Boolean);
 begin
+  if FVisible = Value then
+    Exit;
+
   FVisible:= Value;
 
   //Сбрасываем цвет

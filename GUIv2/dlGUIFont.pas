@@ -92,8 +92,10 @@ interface
        //Пересчитать текстурные координаты
        function CalcTextureCoord: Boolean;
        //Отобразить текст
-       procedure RenderText(const pX, pY: TFloat; const pText: String; pMaxWidth: Integer; pUseLineBreak: Boolean = false);
-       procedure Text(const pX, pY: TFloat; const pText: String; pMaxWidth: Integer = 0);
+       procedure RenderText(const pX, pY: TFloat; const pText: String;
+          pMaxWidth: Integer; pUseLineBreak: Boolean = false);
+       procedure Text(const pX, pY: TFloat; const pText: String;
+          pMaxWidth: Integer = 0; pUseLineBreak: Boolean = false);
        procedure CopyFrom(pFont: TGUIFont);
        procedure CopyMemoryFrom(pFont: TGUIFont);
        //Скопировать объект текстуры
@@ -104,6 +106,7 @@ interface
        //Получить макс кол-во символов в заданной ширине
        function GetTextWidthMax(pText: String; pMax: TFloat): Integer;
        function GetTextWidth(pText: String): TFloat;
+       function GetTextHeight(pText: String): TFloat;
        //
        procedure GetTextRect(const pText: String; out pWidth, pHeight: Integer);
        //
@@ -208,12 +211,12 @@ end;
 
 constructor TGUIFont.Create(pTextureLink: TTextureLink);
 begin
-  FScale      := 1.0;
-  FShowArea   := False;
-  FColor      := TGLColor.Create;
-  FStatus     := gfsNone;
-  FSetter     := [];
-  FTextureLink:= nil;//TTextureLink.Create;
+  FScale       := 1.0;
+  FShowArea    := False;
+  FColor       := TGLColor.Create(clWhite);
+  FStatus      := gfsNone;
+  FSetter      := [];
+  FTextureLink := nil;//TTextureLink.Create;
   FColor.SetColor(clWhite);
   SetTextureLink(pTextureLink);
 end;
@@ -245,6 +248,18 @@ end;
 function TGUIFont.GetHeight: TFloat;
 begin
   Result:= FScale * FHeight;
+end;
+
+function TGUIFont.GetTextHeight(pText: String): TFloat;
+var i: integer;
+    RCount: Integer;
+begin
+  RCount:= 1;
+  for i := 1 to pText.Length do
+    if pText[i] = #13 then
+      Inc(RCount);
+
+  Result:= Height * RCount;
 end;
 
 procedure TGUIFont.GetTextRect(const pText: String; out pWidth, pHeight: Integer);
@@ -342,7 +357,8 @@ begin
 
 end;
 
-procedure TGUIFont.RenderText(const pX, pY: TFloat; const pText: String; pMaxWidth: Integer; pUseLineBreak: Boolean = false);
+procedure TGUIFont.RenderText(const pX, pY: TFloat; const pText: String;
+   pMaxWidth: Integer; pUseLineBreak: Boolean = false);
 var FID       : Integer;
     abs_pos   : TFloat;
     char_id   : Byte;
@@ -463,9 +479,10 @@ begin
   Result:= True;
 end;
 
-procedure TGUIFont.Text(const pX, pY: TFloat; const pText: String; pMaxWidth: Integer);
+procedure TGUIFont.Text(const pX, pY: TFloat; const pText: String;
+   pMaxWidth: Integer = 0; pUseLineBreak: Boolean = false);
 begin
-  RenderText(pX, pY, pText, pMaxWidth, False);
+  RenderText(pX, pY, pText, pMaxWidth, pUseLineBreak);
 end;
 
 procedure TGUIFont.UpdateStatus(pStatus: TGUIFontSetter);

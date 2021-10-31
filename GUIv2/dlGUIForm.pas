@@ -573,6 +573,7 @@ begin
     TGUIObject(FComponent.Items[FID]).OnDeactivate(Self);
 
   FHint.Hide:= True;
+  DestroyActivePopup;
 end;
 
 function TGUIForm.OnHit(pX, pY: Integer): Boolean;

@@ -18,12 +18,18 @@ uses Graphics, dlGUITypes, dlGUIObject;
 
  type
    TGUIImage = class(TGUIObject)
+     strict private
+       FProportion: Boolean;
+
+       procedure SetProportion(value: Boolean);
      protected
        procedure SetResize; override; //Применить к вершинам масштабирование Width, Height
      public
        constructor Create(pName: String; pX, pY, pW, pH: Integer; pTextureLink: TTextureLink = nil);
        procedure SetImageLink(const ATextureLink: TTextureLink);
      published
+       property Proportion: Boolean read FProportion write SetProportion;
+
        property ObjectType;
        property Name;
        property X;
@@ -47,11 +53,11 @@ begin
   inherited Create(pName, gtcImage);
   SetRect(pX, pY, pW, pH);
 
-  Area.Show:= True;
-
-  SetTextureLink(pTextureLink);
-
+  FProportion:= False;
+  Area.Show  := True;
   VertexList.MakeSquare(0, 0, pW, pH, FColor.GetColor, pTextureLink);
+
+  SetImageLink(pTextureLink);
 end;
 
 procedure TGUIImage.SetImageLink(const ATextureLink: TTextureLink);
@@ -71,8 +77,21 @@ begin
   end;
 
   //Если есть текстура то применим новые размеры
-  T.SetCoord(0, 0, Width, 0, Width, Height, 0, Height);
+  if Proportion then
+    T.SetCoord(0, 0, Width, 0, Width, Height, 0, Height)
+  else
+    T.SetCoord(0, 0, ATextureLink.Width, 0, ATextureLink.Width, ATextureLink.Height, 0, ATextureLink.Height);
+
   VertexList.SetVertexTextureMap(0, T);
+end;
+
+procedure TGUIImage.SetProportion(value: Boolean);
+begin
+  if FProportion = value then
+    Exit;
+
+  FProportion:= value;
+  SetImageLink(Self.GetTextureLink);
 end;
 
 procedure TGUIImage.SetResize;
