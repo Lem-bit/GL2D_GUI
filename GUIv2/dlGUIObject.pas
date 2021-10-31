@@ -635,7 +635,6 @@ end;
 
 function TGUIObject.ObjectInAction(pAction: array of TGUIActionSetter; pCheckOr: Boolean = True): Boolean;
 var i: integer;
-    All: Boolean;
 begin
   Result:= False;
 

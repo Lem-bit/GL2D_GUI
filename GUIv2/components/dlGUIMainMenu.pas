@@ -208,6 +208,7 @@ var i: integer;
     HitGroup: Boolean;
 begin
   inherited;
+  HitGroup:= False;
 
   if OnHit(pX, pY) then
   begin
@@ -273,7 +274,6 @@ end;
 procedure TGUIMainMenu.OnMouseUp(pX, pY: Integer; Button: TGUIMouseButton);
 var i: integer;
     Group: TGUIMainMenuGroup;
-    ExistDown: Boolean;
 begin
   inherited;
 
