@@ -20,7 +20,7 @@ interface
   type
    //Список окон
    TGUIFormList = class
-     private
+     strict private
        //Ссылка на текущую форму
        FCurrentForm : Pointer;
        //Список форм
@@ -29,7 +29,7 @@ interface
 
        FMouseDown   : Boolean;
        FMainMenu    : TGUIMainMenu;
-     private
+     strict private
        function IsExists(pNum: integer): Boolean;
        procedure CurrentFormDeactivate;
        function CurrentFormAccessible: Boolean;
@@ -48,6 +48,7 @@ interface
        procedure Render;
 
        //Активировать окно
+       procedure SetActive(pForm: TGUIForm); overload;
        procedure SetActive(pFormName: String); overload;
        procedure SetActive(pFormID: Integer); overload;
 
@@ -131,14 +132,18 @@ end;
 destructor TGUIFormList.Destroy;
 var i: integer;
 begin
-  if Assigned(FFormList) then
-    for i := FFormList.Count - 1 downto 0 do
-      TGUIForm(FFormList[i]).Free;
-
   if Assigned(FMainMenu) then
     FreeAndNil(FMainMenu);
 
+  if Assigned(FFormList) then
+    for i := 0 to FFormList.Count - 1 do
+    begin
+      TGUIForm(FFormList[i]).Free;
+      FFormList[i]:= nil;
+    end;
+
   FreeAndNil(FFormList);
+
   inherited;
 end;
 
@@ -418,6 +423,14 @@ begin
   end;
 end;
 
+procedure TGUIFormList.SetActive(pForm: TGUIForm);
+begin
+  if not Assigned(pForm) then
+    Exit;
+
+  SetActive(pForm.Name);
+end;
+
 function TGUIFormList.WndProc(var AMessage: TMessage): Boolean;
 const SCROLL_UP   = 120;
       SCROLL_DOWN = 65416;
@@ -493,6 +506,12 @@ begin
       AKey:= AMessage.WParamLo;
       OnKeyUp(AKey, Shift);
     end;
+
+    WM_SIZE:
+    begin
+      if Assigned(FMainMenu) then
+        FMainMenu.ResizeWnd(AMessage.LParamLo);
+    end;
   end;
 
   Dispatch(AMessage);
@@ -518,6 +537,7 @@ initialization
    FormList:= TGUIFormList.Create;
 
 finalization
-   FreeAndNil(FormList);
+   if Assigned(FormList) then
+     FreeAndNil(FormList);
 
 end.

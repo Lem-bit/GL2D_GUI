@@ -22,7 +22,7 @@ uses SysUtils, classes, dlGUITypes;
    TGUIProcClass = class
      public
        Name: String;   //Название процедуры
-       Proc: TGUIProc; //Указатель на процедуру
+       Proc: TGUIProc; //Процедура
      public
        constructor Create(pName: String; pProc: TGUIProc);
    end;
@@ -123,18 +123,23 @@ begin
   if FID = -1 then
     Exit;
 
-  TGUIProcClass(FProc.Items[FID]).Free;
-
-  FProc.Delete(FID);
-  FProc.Pack;
+  try
+    TGUIProcClass(FProc.Items[FID]).Free;
+    FProc.Items[FID]:= nil;
+  finally
+    FProc.Pack;
+  end;
 end;
 
 destructor TGUIProcList.Destroy;
-var FID : Integer;
+var FID: Integer;
 begin
   if Assigned(FProc) then
     for FID := 0 to FProc.Count - 1 do
-      TGUIProcClass(FProc.Items[FID]).Destroy;
+    begin
+      TGUIProcClass(FProc.Items[FID]).Free;
+      FProc.Items[FID]:= nil;
+    end;
 
   FreeAndNil(FProc);
   inherited;

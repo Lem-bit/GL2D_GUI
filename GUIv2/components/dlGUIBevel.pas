@@ -3,7 +3,7 @@
 interface
 
 uses
-  dlOpenGL, dlGUITypes, dlGUIObject, dlGUIPaletteHelper;
+  dlOpenGL, dlGUITypes, dlGUIObject, dlGUIPaletteHelper, dlGUIXmlSerial;
 
 {
   ====================================================
@@ -27,37 +27,35 @@ type
                     );
 
   TGUIBevel = class(TGUIObject)
-    private
+    strict private
       FShape: TGUIBevelShape;
-    private
+    strict private
       procedure SetShape(pValue: TGUIBevelShape);
     protected
       procedure SetResize; override;
     public
-      constructor Create(pName: String; pX, pY, pW, pH: Integer; pTextureLink: TTextureLink = nil);
+      constructor Create(pName: String = ''; pTextureLink: TTextureLink = nil);
     public
-      property Shape: TGUIBevelShape read FShape write SetShape;
+     [TXMLSerial] property Shape: TGUIBevelShape read FShape write SetShape;
   end;
 
 implementation
 
 { TGUIBevel }
 
-constructor TGUIBevel.Create(pName: String; pX, pY, pW, pH: Integer; pTextureLink: TTextureLink);
+constructor TGUIBevel.Create(pName: String = ''; pTextureLink: TTextureLink = nil);
 begin
   inherited Create(pName, gtcBevel);
 
   FShape   := bsBox;
   FModeDraw:= GL_LINE_LOOP;
 
-  SetRect(pX, pY, pW, pH);
+  SetRect(0, 0, 200, 200);
 
   SetTextureLink(pTextureLink);
 
   //Список вершин
-  VertexList.MakeSquare(0, 0, Width, Height, Color, GUIPalette.GetCellRect(pal_2));
-  //Замыкающая квадрат вершина
-  VertexList.Vertex[VertexList.Count - 1].GapOccur:= True;
+  VertexList.MakeSquare(Rect.X, Rect.Y, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_2));
   //Установим единичную текстуру
   VertexList.SetVertexTextureOne;
 
@@ -78,7 +76,7 @@ begin
   FShape:= pValue;
 
   case FShape of
-    //true так как значение инвертируется если элемент не найден в списке
+    //
     bsBox   : VertexList.SetVertexShowInList(true , [-1]);
 
     //

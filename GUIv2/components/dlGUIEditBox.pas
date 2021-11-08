@@ -3,7 +3,7 @@
 interface
 
 uses SysUtils, Clipbrd, Windows, Graphics, Classes, dlOpenGL, dlGUITypes, dlGUIObject, dlGUIPaletteHelper,
-  dlGUIFont;
+  dlGUIFont, dlGUIXmlSerial;
 
 {
   ====================================================
@@ -129,7 +129,7 @@ type
       OnCopy : TGUIProc;
       OnPaste: TGUIProc;
     public
-      constructor Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
+      constructor Create(pName: String = ''; pTextureLink: TTextureLink = nil);
       destructor Destroy; override;
 
       procedure OnKeyDown(var Key: Word; Shift: TShiftState); override;
@@ -141,29 +141,14 @@ type
 
       procedure RenderText; override;
       procedure Render; override;
-    published
-      property ObjectType;
-      property Name;
-      property X;
-      property Y;
-      property Width;
-      property Height;
-      property Font;
-      property Hide;
-      property TextureName;
-      //классы
-      property Parent;
-      property PopupMenuName;
-      property Hint;
-      property Blend;
-
-      property CursorWidth: Integer         read FCursorWidth write FCursorWidth;
-      property Text       : String          read FText        write SetText;
-      property MaxLength  : Integer         read FMaxLength   write SetMaxLength;
-      property TypeInput  : TGUITypeInput   read FTypeInput   write FTypeInput;
-      property Mask       : String          read FMask        write FMask;
-      property ReadOnly   : Boolean         read FReadOnly    write FReadOnly;
-      property BorderStyle: TGUIBorderStyle read FBorderStyle write SetBorderStyle;
+    public
+      [TXMLSerial] property CursorWidth: Integer         read FCursorWidth write FCursorWidth;
+      [TXMLSerial] property Text       : String          read FText        write SetText;
+      [TXMLSerial] property MaxLength  : Integer         read FMaxLength   write SetMaxLength;
+      [TXMLSerial] property TypeInput  : TGUITypeInput   read FTypeInput   write FTypeInput;
+      [TXMLSerial] property Mask       : String          read FMask        write FMask;
+      [TXMLSerial] property ReadOnly   : Boolean         read FReadOnly    write FReadOnly;
+      [TXMLSerial] property BorderStyle: TGUIBorderStyle read FBorderStyle write SetBorderStyle;
   end;
 
 implementation
@@ -188,13 +173,13 @@ begin
   Result:= i;
 end;
 
-constructor TGUIEditBox.Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
+constructor TGUIEditBox.Create(pName: String = ''; pTextureLink: TTextureLink = nil);
 begin
   inherited Create(pName, gtcEditBox);
 
   FCursor   := TGUICursor.Create(clWhite);
   FSelection:= TGUIEditBoxSelection.Create(Self);
-  SetRect(pX, pY, 80, 20);
+  SetRect(0, 0, 80, 20);
 
   FCursorWidth     := 1;
   FCursor.CharPos  := 1;
@@ -206,7 +191,7 @@ begin
 
   SetTextureLink(pTextureLink);
 
-  VertexList.MakeSquare(0, 0, Width, Height, Color, GUIPalette.GetCellRect(pal_Frame));
+  VertexList.MakeSquare(Rect.X, Rect.Y, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_Frame));
   VertexList.MakeSquareOffset(0, 1, Color, GUIPalette.GetCellRect(pal_Window));
   UpdateCursorRect;
 end;

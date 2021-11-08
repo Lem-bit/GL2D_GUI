@@ -67,7 +67,7 @@ const
 
 type
   TGUIPaletteHelper = class
-    private
+    strict private
       //Размер ячейки (Квадратный)
       FCellSize    : Integer;
       //Макс кол-во ячеек в длинну
@@ -129,7 +129,8 @@ begin
 end;
 
 initialization
-  GUIPalette:= TGUIPaletteHelper.Create();
+  if not Assigned(GUIPalette) then
+    GUIPalette:= TGUIPaletteHelper.Create();
 
 finalization
   if Assigned(GUIPalette) then

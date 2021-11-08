@@ -3,7 +3,7 @@
 interface
 
  uses Windows, dlGUITypes, dlOpenGL, Graphics, SysUtils, Classes, dlGUIObject, dlGUIFont,
-      dlGUIPopupMenu, dlGUIButton, dlGUIPaletteHelper;
+      dlGUIPopupMenu, dlGUIButton, dlGUIPaletteHelper, dlGUIXMLSerial;
 
 {
   ====================================================
@@ -86,31 +86,35 @@ interface
 
    //Окно
    TGUIForm = class(TGUIObject)
-     private
-       //Заголовок
+     strict private
        FCaption     : TGUIFormCaption;
        FMinimized   : Boolean;
        FHitCaption  : Boolean; //OnHit сработал у Caption или у Form
-     private
        FCurrID      : Integer; //Текущий индекс компонента, номер последнего добавленного
        FActivePopup : TGUIPopupMenu; //Текущее активное меню
        FFocusComp   : TGUIObject; //Компонент в фокусе
-     private
        FHint        : TGUIFormHint; //Всплывающая подсказка
-     private
        FComponent   : TList;   //Список компонентов
-
+       FFormStyle   : TGUIFormStyle;
+     private
        function GetCaption: String;
        procedure SetCaption(pCaption: String);
        procedure DestroyActivePopup;
+       function IsExists(pIndex: integer): Boolean;
+
+       procedure SetX(value: integer);
+       function GetX: Integer;
+       procedure SetY(value: integer);
+       function GetY: Integer;
      protected
        procedure SetResize; override;
+       procedure SetHide(pHide: Boolean); override;
      public
        constructor Create(pName, pCaption: String; pX, pY, pWidth, pHeight: Integer; pTextureLink: TTextureLink = nil; pTextureFont: TTextureLink = nil; pFormStyle: TGUIFormStyle = fglNormal;
          pBorderIcons: TGUIBorderIcons = fbiAll);
        destructor Destroy; override;
 
-       function IsExists(pIndex: integer): Boolean;
+       procedure SetCenterByRect(ARect: TRect);
 
        procedure AddComponent(pComponent: TGUIObject);
        function GetComponent(pName: String): TGUIObject; overload;
@@ -134,35 +138,28 @@ interface
        procedure AfterObjRender; override;
        procedure Render; override;
        procedure SendGUIMessage(pMessage: TGUIMessage); override;
-
-       procedure SetX(value: integer);
-       function GetX: Integer;
-       procedure SetY(value: integer);
-       function GetY: Integer;
      public
+       property X: Integer                       read GetX        write SetX;
+       property Y: Integer                       read GetY        write SetY;
        property CaptionObject: TGUIFormCaption   read FCaption    write FCaption;
-       property ComponentList: TList             read FComponent;
-       property Item[index: integer]: TGUIObject read GetComponent;
        property HintObject: TGUIFormHint         read FHint;
-     published
-       property Caption: String                  read GetCaption  write SetCaption;
-       property ObjectType;
-       property Name;
-       property X: Integer read GetX write SetX;
-       property Y: Integer read GetY write SetY;
-       property Width;
-       property Height;
-       property Color;
-       property Font;
-       property Hide;
-       property TextureName;
-       property Minimize: Boolean                read FMinimized  write FMinimized;
-       //классы
-       property PopupMenuName;
-       property Parent;
-       property Hint;
-       property Blend;
-
+     public
+       property Item[index: integer]: TGUIObject      read GetComponent;
+     public
+       [TXMLSerial] property Minimized: Boolean       read FMinimized    write FMinimized;
+       [TXMLSerial] property Caption: String          read GetCaption    write SetCaption;
+       [TXMLSerial] property FormStyle: TGUIFormStyle read FFormStyle;
+       [TXMLSerial] property ComponentList: TList     read FComponent;
+       [TXMLSerial] property Rect;
+       [TXMLSerial] property Name;
+       [TXMLSerial] property Color;
+       [TXMLSerial] property Hide;
+       [TXMLSerial] property Enable;
+       [TXMLSerial] property TextureName;
+       [TXMLSerial] property Font;
+       [TXMLSerial] property Parent;
+       [TXMLSerial] property Hint;
+       [TXMLSerial] property Blend;
    end;
 
 implementation
@@ -236,10 +233,10 @@ end;
 
 procedure TGUIFormCaption.MakeButton(var pButton: TGUIButton; pProc: TGUIProc; pImage, pImageDown: Integer);
 begin
-  pButton:= TGUIButton.Create('', '', 0, 0, Self.GetTextureLink);
+  pButton:= TGUIButton.Create('', Self.GetTextureLink);
   pButton.Rect.SetSize(BUTTON_WIDTH, BUTTON_WIDTH);
   pButton.Area.Show:= False;
-  pButton.OnResize;
+  pButton.ProcessEvents;
   pButton.OnClick:= pProc;
   pButton.VertexList.SetVertexTextureMap( 4, GUIPalette.GetCellRect(pImage));
   pButton.VertexList.SetVertexTextureMap(12, GUIPalette.GetCellRect(pImageDown));
@@ -247,7 +244,10 @@ end;
 
 procedure TGUIFormCaption.MinimizeWindow(Sender: TObject; ParamObj: Pointer = nil);
 begin
-  TGUIForm(Parent).FMinimized:= not TGUIForm(Parent).FMinimized;
+  if not Assigned(Parent) then
+    Exit;
+
+  TGUIForm(Parent).Minimized:= not TGUIForm(Parent).Minimized;
 end;
 
 procedure TGUIFormCaption.OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton);
@@ -377,6 +377,7 @@ begin
 
   //Создание хинта
   FHint:= TGUIFormHint.Create(pTextureFont);
+  FFormStyle:= pFormStyle;
 
   //Создание формы
   FCurrID     := 0;
@@ -462,7 +463,10 @@ begin
 
   //Если нет шрифта то присваиваем
   if pComponent.Font.GetTextureLink = nil then
+  begin
     pComponent.Font.CopyFrom(Self.FFont);
+    pComponent.ProcessEvents;
+  end;
 
   msg.Msg := MSG_FORM_INSERTOBJ;
   msg.Self:= self;
@@ -731,6 +735,11 @@ begin
     //Получить какой то другой активный popup например у ListBox
     if not Assigned(FActivePopup) then
       FActivePopup:= TGUIPopupMenu(Obj.GetChildItemPopup);
+
+    //Перемещаем на последнее место
+    if Obj.ShowOnTop then
+      FComponent.Move(FID, FComponent.Count - 1);
+    Break;
   end;
 
   if (not FHitCaption) and Assigned(FActivePopup) then
@@ -824,8 +833,12 @@ begin
   if Assigned(FCaption) then
     FCaption.OnMouseUp(pX, pY, Button);
 
-  if FMinimized then Exit;
+  if FMinimized then
+    Exit;
 
+  if Assigned(FFocusComp) then
+    FFocusComp.OnMouseUp(pX - Rect.X, pY - Rect.Y, Button)
+  else
   for FID := 0 to FComponent.Count - 1 do
      TGUIObject(FComponent.Items[FID]).OnMouseUp(pX - Rect.X, pY - Rect.Y, Button);
 
@@ -861,7 +874,8 @@ end;
 
 procedure TGUIForm.Render;
 begin
-  if Hide then Exit;
+  if Hide then
+    Exit;
 
   if not Assigned(FCaption) then
   begin
@@ -889,12 +903,17 @@ end;
 
 procedure TGUIForm.AfterObjRender;
 var FID: Integer;
+    Comp: TGUIObject;
 begin
-  if Hide then Exit;
+  if Hide then
+    Exit;
 
   //Рисуем компоненты на форме
   for FID := 0 to FComponent.Count - 1 do
-    TGUIObject(FComponent.Items[FID]).Render;
+  begin
+    Comp:= TGUIObject(FComponent.Items[FID]);
+    Comp.Render;
+  end;
 
   //Отображаем PopupMenu
   if Assigned(FActivePopup) then
@@ -909,6 +928,21 @@ procedure TGUIForm.SetCaption(pCaption: String);
 begin
   if Assigned(FCaption) then
     FCaption.FText:= pCaption;
+end;
+
+procedure TGUIForm.SetCenterByRect(ARect: TRect);
+begin
+  X:= Round((ARect.Width / 2) - (Width / 2));
+  Y:= Round((ARect.Height / 2) - (Height / 2));
+end;
+
+procedure TGUIForm.SetHide(pHide: Boolean);
+begin
+  inherited;
+  if FFormStyle <> fglNormal then
+    Exit;
+
+  FCaption.Hide:= False;
 end;
 
 { TGUIFormHint }

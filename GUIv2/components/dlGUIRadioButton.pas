@@ -2,7 +2,7 @@
 
 interface
 
-uses dlGUITypes, dlGUIObject, dlGUIPaletteHelper;
+uses dlGUITypes, dlGUIObject, dlGUIPaletteHelper, dlGUIXmlSerial;
 
 {
   ====================================================
@@ -18,25 +18,25 @@ uses dlGUITypes, dlGUIObject, dlGUIPaletteHelper;
 
 type
   TGUIRadioButton = class(TGUIObject)
-    private
+    strict private
       FChecked: Boolean;
       FText   : String;
       FGroup  : Byte; //Группа в которой состоит компонент (для переключения)
-    private
+    strict private
       procedure ChangeStatus(pChecked: Boolean);
     protected
       procedure SetAreaResize; override;
       procedure SetFontEvent; override; //Событие при создании шрифта
     public
-      constructor Create(pName, pText: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
+      constructor Create(pName: String = ''; pTextureLink: TTextureLink = nil);
       procedure RenderText; override;
 
       procedure OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton); override;
       procedure SendGUIMessage(pMessage: TGUIMessage); override;
     public
-      property Checked: Boolean read FChecked write ChangeStatus;
-      property Group  : Byte    read FGroup   write FGroup;
-      property Text   : String  read FText    write FText;
+      [TXMLSerial] property Checked: Boolean read FChecked write ChangeStatus;
+      [TXMLSerial] property Group  : Byte    read FGroup   write FGroup;
+      [TXMLSerial] property Text   : String  read FText    write FText;
   end;
 
 implementation
@@ -54,21 +54,21 @@ begin
   VertexList.SetGroupHide(GROUP_CHECK  , not pChecked);
 end;
 
-constructor TGUIRadioButton.Create(pName, pText: String; pX, pY: Integer; pTextureLink: TTextureLink);
+constructor TGUIRadioButton.Create(pName: String = ''; pTextureLink: TTextureLink = nil);
 begin
   inherited Create(pName, gtcRadioButton);
 
-  SetRect(pX, pY, 100, RADIOBUTTON_SIZE);
+  SetRect(0, 0, 100, RADIOBUTTON_SIZE);
 
-  FText    := pText;
+  FText    := '';
   FGroup   := 0;
   Area.Show:= True;
 
   FTextOffset.SetRect(RADIOBUTTON_SIZE + 4, 0, 0, 0);
   SetTextureLink(pTextureLink);
 
-  VertexList.MakeSquare(0, 0, RADIOBUTTON_SIZE, RADIOBUTTON_SIZE, Color, GUIPalette.GetCellRect(pal_RadioButton_uc), GROUP_UNCHECK);
-  VertexList.MakeSquare(0, 0, RADIOBUTTON_SIZE, RADIOBUTTON_SIZE, Color, GUIPalette.GetCellRect(pal_RadioButton_ch), GROUP_CHECK, True);
+  VertexList.MakeSquare(Rect.X, Rect.Y, RADIOBUTTON_SIZE, RADIOBUTTON_SIZE, Color, GUIPalette.GetCellRect(pal_RadioButton_uc), GROUP_UNCHECK);
+  VertexList.MakeSquare(Rect.X, Rect.Y, RADIOBUTTON_SIZE, RADIOBUTTON_SIZE, Color, GUIPalette.GetCellRect(pal_RadioButton_ch), GROUP_CHECK, True);
 end;
 
 procedure TGUIRadioButton.OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton);

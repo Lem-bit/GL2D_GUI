@@ -2,7 +2,7 @@
 
 interface
 
-uses dlGUITypes, dlGUIObject;
+uses SysUtils, dlGUITypes, dlGUIObject, dlGUIPaletteHelper, dlGUIXmlSerial;
 
 {
   ====================================================
@@ -18,41 +18,54 @@ uses dlGUITypes, dlGUIObject;
 
 type
   TGUILabel = class(TGUIObject)
-    private
+    strict private
       FText    : String;  //Текст
       FWordWarp: Boolean; //Переносить текст на след строку или нет
-    private
+    strict private
       procedure SetText(pText: String);
+    protected
+      procedure SetFontEvent; override;
+      procedure SetResize; override;
     public
-      constructor Create(pText: String; pName: String = '');
+      constructor Create(pName: String = ''; pTextureLink: TTextureLink = nil);
       procedure RenderText; override;
-    published
-      property ObjectType;
-      property Name;
-      property X;
-      property Y;
-      property Font;
-      property Hide;
-      property TextureName;
-      //классы
-      property Parent;
-      property PopupMenuName;
-      property Hint;
-      property Blend;
-
-      property Text    : String  read FText     write SetText;
-      property WordWarp: Boolean read FWordWarp write FWordWarp;
+      procedure Render; override;
+      procedure ClearTexture;
+    public
+      [TXMLSerial] property Text    : String  read FText     write SetText;
+      [TXMLSerial] property WordWarp: Boolean read FWordWarp write FWordWarp;
   end;
 
 implementation
 
 { TGUILabel }
 
-constructor TGUILabel.Create(pText: String; pName: String = '');
+procedure TGUILabel.ClearTexture;
+begin
+  SetTextureLink(nil);
+end;
+
+constructor TGUILabel.Create(pName: String = ''; pTextureLink: TTextureLink = nil);
 begin
   inherited Create(pName, gtcLabel);
+  Rect.SetRect(0, 0, 0, 0);
+
   FWordWarp:= False;
-  FText    := pText;
+  FText    := '';
+
+  SetTextureLink(pTextureLink);
+  VertexList.MakeSquare(Rect.X, Rect.Y, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_Window));
+end;
+
+procedure TGUILabel.Render;
+begin
+  if GetTextureLink = nil then
+  begin
+    RenderText;
+    Exit;
+  end;
+
+  inherited;
 end;
 
 procedure TGUILabel.RenderText;
@@ -61,9 +74,25 @@ begin
   FFont.RenderText(Rect.X + FTextOffset.X, Rect.Y + FTextOffset.Y, FText, Rect.Width, FWordWarp);
 end;
 
+procedure TGUILabel.SetFontEvent;
+var AWidth, AHeight: Integer;
+begin
+  inherited;
+
+  Font.GetTextRect(FText, AWidth, AHeight);
+  Width := AWidth;
+  Height:= AHeight;
+  SetResize;
+end;
+
+procedure TGUILabel.SetResize;
+begin
+  VertexList.SetVertexPosSquare(0, 0, 0, Rect.Width, Rect.Height);
+end;
+
 procedure TGUILabel.SetText(pText: String);
 begin
-  if FText = pText then
+  if SameText(FText, pText) then
     Exit;
 
   FText:= pText;

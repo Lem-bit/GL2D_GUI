@@ -2,7 +2,7 @@
 
 interface
 
- uses dlGUITypes, dlGUIFont, Graphics, dlGUIObject, dlGUIPaletteHelper;
+ uses dlGUITypes, dlGUIFont, Graphics, dlGUIObject, dlGUIPaletteHelper, dlGUIXmlSerial;
 
 {
   ====================================================
@@ -18,10 +18,10 @@ interface
 
   type
    TGUIButton = class(TGUIObject)
-      private
+      strict private
         FCaption: String;
         FFlat   : Boolean; //Кнопка без рамки
-      private
+      strict private
         procedure SetCaption(pCaption: String);
       protected
         procedure SetFontEvent; override;
@@ -29,31 +29,24 @@ interface
         procedure SetResize; override; //Применить к вершинам масштабирование Width, Height
         procedure SetFlat(pFlat: Boolean);
       public
-        constructor Create(pName: String; pCaption: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
+        constructor Create(pName: String = ''; pTextureLink: TTextureLink = nil);
 
         procedure OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton); override;
         procedure OnMouseUp(pX, pY: Integer; Button: TGUIMouseButton); override;
         procedure RenderText; override;
-      published
-        property Caption: String  read FCaption write SetCaption;
-        property Flat   : Boolean read FFlat    write SetFlat;
-      published
-        property ObjectType;
+      public
         ///Name
-        property Name;
-        property X;
-        property Y;
-        property Width;
-        property Height;
-        property Color;
-        property Font;
-        property Hide;
-        property TextureName;
+        [TXMLSerial] property Caption: String  read FCaption write SetCaption;
+        [TXMLSerial] property Flat   : Boolean read FFlat    write SetFlat;
+        [TXMLSerial] property Rect;
+        [TXMLSerial] property Color;
+        [TXMLSerial] property Font;
+        [TXMLSerial] property Hide;
+        [TXMLSerial] property TextureName;
         //классы
-        property Parent;
-        property PopupMenuName;
-        property Hint;
-        property Blend;
+        [TXMLSerial] property PopupMenu;
+        [TXMLSerial] property Hint;
+        [TXMLSerial] property Blend;
    end;
 
 implementation
@@ -65,22 +58,22 @@ const GROUP_DOWN        = 0;
       GROUP_UP          = 2;
       GROUP_UP_BORDER   = 3;
 
-constructor TGUIButton.Create(pName: String; pCaption: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
+constructor TGUIButton.Create(pName: String = ''; pTextureLink: TTextureLink = nil);
 begin
   inherited Create(pName, gtcButton);
 
-  SetRect(pX, pY, 100, 25);
-  FCaption:= pCaption;
+  SetRect(0, 0, 100, 25);
+  FCaption := '';
   Area.Show:= True;
   FFlat    := False;
 
   RecalcTextPos;
   SetTextureLink(pTextureLink);
 
-  VertexList.MakeSquare(0, 0, Width, Height, Color, GUIPalette.GetCellRect(pal_Frame), GROUP_UP);
+  VertexList.MakeSquare(Rect.X, Rect.Y, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_Frame), GROUP_UP);
   VertexList.MakeSquareOffset(0, 1, Color, GUIPalette.GetCellRect(pal_Window), GROUP_UP_BORDER, FFlat);
 
-  VertexList.MakeSquare(0, 0, Width, Height, Color, GUIPalette.GetCellRect(pal_2), GROUP_DOWN, True);
+  VertexList.MakeSquare(Rect.X, Rect.Y, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_2), GROUP_DOWN, True);
   VertexList.MakeSquareOffset(8, 1, Color, GUIPalette.GetCellRect(pal_3), GROUP_DOWN_BORDER, True);
 end;
 

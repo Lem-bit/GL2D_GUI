@@ -3,9 +3,7 @@
 interface
 
 uses SysUtils, Classes, Graphics, dlGUITypes, dlGUIObject, dlGUITracker, dlGUIPaletteHelper,
-  dlOpenGL,
-  dlGUIVertexController,
-  dlGUIFont;
+  dlOpenGL, dlGUIVertexController, dlGUIFont, dlGUIXmlSerial;
 
 {
   ====================================================
@@ -36,13 +34,14 @@ type
       procedure Render; override;
       procedure RenderText; override;
     public
-      property Text: String read FText write FText;
+     [TXMLSerial] property Text: String read FText write FText;
   end;
 
   //Список ячеек
   TGUITableCellList = class
     protected
-      FItem : TList; //Список элементов
+      [TXMLSerial] FItem : TList; //Список элементов
+    protected
       FTable: TGUITable; //Ссылка на таблицу
     strict private
       function GetOwnerTable: TGUITable;
@@ -87,14 +86,14 @@ type
       procedure OnMouseUp(pX, pY: Integer; Button: TGUIMouseButton);
     public
       property Col[index: integer]: TGUITableCol read GetCellItem;
-      property Height: integer read FHeight write SetHeight;
+      [TXMLSerial] property Height: integer read FHeight write SetHeight;
   end;
 
   //Список элементов таблицы
   TGUITableRows = class
     private
       FTable : TGUITable;
-      FItem  : TList;
+      [TXMLSerial] FItem  : TList;
     strict private
       function GetOwnerTable: TGUITable;
     protected
@@ -134,7 +133,7 @@ type
       procedure Add(const AText: String; AWidth: Integer = 100);
       function Count: Integer;
     public
-      property Height: Integer read FHeight write SetHeight;
+      [TXMLSerial] property Height: Integer read FHeight write SetHeight;
       property Item[index: integer]: TGUITableHeader read GetCellItem;
   end;
 
@@ -159,8 +158,8 @@ type
       property Col : Integer       read FCol   write FCol;
       property Cell: TGUITableCell read FCell  write FCell;
     public
-      property Blend: TBlendParam  read FBlend write FBlend;
-      property Color: TGLColor     read FColor write FColor;
+      [TXMLSerial] property Blend: TBlendParam  read FBlend write FBlend;
+      [TXMLSerial] property Color: TGLColor     read FColor write FColor;
   end;
 
   //Свойства и настройки
@@ -172,8 +171,8 @@ type
       constructor Create;
       destructor Destroy; override;
     public
-      property EnableSelect : Boolean read FEnableSelect  write FEnableSelect;
-      property SelectRow    : Boolean read FSelectRow     write FSelectRow;
+      [TXMLSerial] property EnableSelect : Boolean read FEnableSelect  write FEnableSelect;
+      [TXMLSerial] property SelectRow    : Boolean read FSelectRow     write FSelectRow;
   end;
 
   TGUITable = class(TGUITrackerIntf)
@@ -198,7 +197,7 @@ type
       procedure SetFontEvent; override;
       procedure SetResize; override;
     public
-      constructor Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
+      constructor Create(pName: String = ''; pTextureLink: TTextureLink = nil);
       destructor Destroy; override;
 
       procedure OnMoveTracker(Sender: TObject; ParamObj: Pointer = nil);
@@ -214,19 +213,19 @@ type
       OnUnSelectCell: TGUIProc; //Нажали в пустую область и выбор отменился
       OnRender      : TGUIProc;
     public
-      property Properties: TGUITableProperties read FProperties;
-      property Selected  : TGUITableSelected   read FSelected;
-      property Headers   : TGUITableHeaders    read FHeaders;
-      property Items     : TGUITableRows       read FItems;
+      [TXMLSerial] property Properties: TGUITableProperties read FProperties;
+      [TXMLSerial] property Selected  : TGUITableSelected   read FSelected;
+      [TXMLSerial] property Headers   : TGUITableHeaders    read FHeaders;
+      [TXMLSerial] property Items     : TGUITableRows       read FItems;
   end;
 
 implementation
 
 { TGUITableIntf }
 
-constructor TGUITable.Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
+constructor TGUITable.Create(pName: String = ''; pTextureLink: TTextureLink = nil);
 begin
-  inherited Create(pName, gtcTable, pX, pY, 200, 200, pTextureLink);
+  inherited Create(pName, gtcTable, 0, 0, 200, 200, pTextureLink);
 
   F_ROW_MAX_WIDTH:= 0;
   F_MAX_ITEMS_X  := 0;
@@ -243,13 +242,13 @@ begin
   FOffsetX:= 0;
   FOffsetY:= 0;
 
-  SetRect(pX, pY, 200, 200);
+  SetRect(0, 0, 200, 200);
 
   VTracker.Hide:= False;
   HTracker.Hide:= False;
 
   //Фон
-  VertexList.MakeSquare(0, 0, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_Frame));
+  VertexList.MakeSquare(Rect.X, Rect.Y, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_Frame));
 end;
 
 destructor TGUITable.Destroy;

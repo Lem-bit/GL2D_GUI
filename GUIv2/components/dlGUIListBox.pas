@@ -3,7 +3,7 @@
 interface
 
 uses SysUtils, Classes, Graphics, dlOpenGL, dlGUITypes, dlGUIObject, dlGUIPaletteHelper, dlGUIButton, dlGUIImage,
-  dlGUITracker, dlGUIPopupMenu;
+  dlGUITracker, dlGUIPopupMenu, dlGUIXMLSerial;
 
 {
   ====================================================
@@ -27,7 +27,7 @@ type
     FOutText   : String;
 
     FSelectedColor: TColor; //Цвет если элемент выбран
-  private
+  strict private
     procedure SetText(pText: String);
     procedure SetBrushColor(pValue: TColor);
   protected
@@ -42,10 +42,10 @@ type
     procedure RenderText; override;
     procedure SetOffsetX(pValue: Integer);
   public
-    property BrushColor   : TColor  read FBrushColor    write SetBrushColor;
-    property SelectedColor: TColor  read FSelectedColor write FSelectedColor;
-    property Text         : String  read FText          write SetText;
-    property Selected     : Boolean read FSelected      write FSelected;
+    [TXMLSerial] property BrushColor   : TColor  read FBrushColor    write SetBrushColor;
+    [TXMLSerial] property SelectedColor: TColor  read FSelectedColor write FSelectedColor;
+    [TXMLSerial] property Text         : String  read FText          write SetText;
+    [TXMLSerial] property Selected     : Boolean read FSelected      write FSelected;
   end;
 
   TGUIListBox = class(TGUITrackerIntf)
@@ -61,9 +61,9 @@ type
     FSelected     : Integer; //Выбранный элемент
     FYOffset      : Integer; //Сдвиг по Y
     FXOffset      : Integer; //Сдвиг по Х
-    FItem         : TList;   //Список элементов
-
     FBrushColor   : TColor;
+  private
+    [TXMLSerial] FItem: TList;   //Список элементов
   private
     procedure SetMaxVertTracker;
     procedure SetMaxHorizTracker;
@@ -82,7 +82,7 @@ type
     procedure SetResize; override;
     procedure SetHide(pHide: Boolean); override;
   public
-    constructor Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
+    constructor Create(pName: String = ''; pTextureLink: TTextureLink = nil);
     destructor Destroy; override;
 
     procedure OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton); override;
@@ -95,7 +95,7 @@ type
 
     procedure Render; override;
   public
-    OnElementSelect: TGUIProc;
+    [TXMLSerial] OnElementSelect: TGUIProc;
     //Получить какой то другой активный popup например у ListBox
     function GetChildItemPopup: TGUIObject; override;
     procedure VisibleVTracker(pVisible: Boolean);
@@ -111,9 +111,10 @@ type
     procedure SaveToFile(const AFileName: String);
   public
     property Selected: Integer     read FSelected;
-    property BrushColor: TColor    read FBrushColor    write FBrushColor;
-    property LineSpacing: Integer  read FLineSpacing   write SetLineSpacing;
     property Items[index: integer]: TGUIListBoxItem read GetItem;
+  public
+    [TXMLSerial] property BrushColor: TColor    read FBrushColor    write FBrushColor;
+    [TXMLSerial] property LineSpacing: Integer  read FLineSpacing   write SetLineSpacing;
   end;
 
 implementation
@@ -248,22 +249,22 @@ begin
     VTracker.MaxValue := FItem.Count;
 end;
 
-constructor TGUIListBox.Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink);
+constructor TGUIListBox.Create(pName: String = ''; pTextureLink: TTextureLink = nil);
 begin
-  inherited Create(pName, gtcListBox, pX, pY, 200, 200, pTextureLink);
+  inherited Create(pName, gtcListBox, 0, 0, 200, 200, pTextureLink);
 
   FBorder       := 2;
   FYOffset      := 0;
   FXOffset      := 0;
-  FLineSpacing  := 0;
+  FLineSpacing  := 1;
   FItem         := TList.Create;
   FItem.Capacity:= 10000;
   FBrushColor   := $00202020;
 
-  SetRect(pX, pY, 200, 200);
+  SetRect(0, 0, 200, 200);
 
   //Область компонента
-  VertexList.MakeSquare(0, 0, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_Frame));
+  VertexList.MakeSquare(Rect.X, Rect.Y, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_Frame));
   //Рамка
   VertexList.MakeSquare(FBorder, FBorder, Rect.Width - (FBorder * 2), Rect.Height - (FBorder * 2), Color, GUIPalette.GetCellRect(pal_2));
   VertexList.MakeSquare(FBorder, FBorder, FMaxWidth, FMaxHeight, Color, GUIPalette.GetCellRect(pal_0), GR_MAIN);
@@ -575,14 +576,14 @@ begin
   FText         := pText;
   FOutText      := pText;
   FSelected     := False;
-  Area.Show     := True;
-  FSelectedColor:= $004F4F4F;
 
-{  Area.Color.SetColor($00002E5B);
+  Area.Show      := True;
+  Area.Offset    := -1;
+  Area.AnimEnable:= True;
+  Area.Speed     := 0.05;
+  Area.DrawMode  := GL_QUADS;
+  FSelectedColor := $004F4F4F;
   Area.Blend.Set_SrcAlpha_OneMinusSrcAlpha;
-  Area.DrawMode     := GL_QUADS;
-  Area.Speed        := 0.04;
-  Area.AnimEnable   := True;}
 
   VertexList.MakeSquare(0, 0, 0, 0, Color, nil);
 end;
@@ -611,6 +612,9 @@ end;
 procedure TGUIListBoxItem.SetAreaResize;
 begin
   inherited;
+
+  if not Assigned(FArea) then
+    Exit;
 
   if Assigned(PopupMenu) then
     Area.Show:= PopupMenu.Hide

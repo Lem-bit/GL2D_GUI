@@ -2,7 +2,7 @@
 
 interface
 
-uses Graphics, Classes, Windows, SysUtils, dlOpenGL;
+uses Graphics, Classes, Windows, SysUtils, dlOpenGL, dlGUIXMLSerial;
 
 {
   ====================================================
@@ -224,12 +224,12 @@ type
 //Точка (POINT) для построения всех объектов GUI
   TVertexClass = class
   public
-    Vertex  : TCoord2D;       //Координаты точки
-    TexCoord: TTextureCoord;  //Текстурные координаты
-    Color   : TGLColor;       //Цвет точки
-    Hide    : Boolean;        //Скрывать вершину или нет
-    Group   : Byte;           //Группа, для группового изменения состояния
-    GapOccur: Boolean;        //Разрыв на этой вершине (glBegin, glEnd) при прорисовке в режиме GL_LINE_LOOP
+    Vertex    : TCoord2D;       //Координаты точки
+    TexCoord  : TTextureCoord;  //Текстурные координаты
+    Color     : TGLColor;       //Цвет точки
+    Hide      : Boolean;        //Скрывать вершину или нет
+    Group     : Byte;           //Группа, для группового изменения состояния
+    GapOccur  : Boolean;        //Разрыв на этой вершине (glBegin, glEnd) при прорисовке в режиме GL_LINE_LOOP
   public
     constructor Create(pX, pY: TFloat; pColor: TColor = clWhite; pTU: TFloat = 0.0; pTV: TFloat = 0.0; pGroup: Byte = 0; pHide: Boolean = false);
     procedure SetColor(pColor: TColor); //Установить цвет
@@ -251,10 +251,10 @@ type
     constructor Create; overload;
     constructor Create(pX, pY, pW, pH: TFloat); overload;
   published
-    property X: TFloat read FX write FX;
-    property Y: TFloat read FY write FY;
-    property W: TFloat read FW write FW;
-    property H: TFloat read FH write FH;
+    [TXMLSerial] property X: TFloat read FX write FX;
+    [TXMLSerial] property Y: TFloat read FY write FY;
+    [TXMLSerial] property W: TFloat read FW write FW;
+    [TXMLSerial] property H: TFloat read FH write FH;
   end;
 
 //===========================================
@@ -267,11 +267,11 @@ type
     FAlpha   : TFloat;  //Цвет альфа канала
     FEquation: TUInt;   //
   public
-    property Enable  : Boolean read FEnable   write FEnable;
-    property Src     : TUInt   read FSrc      write FSrc;
-    property Dst     : TUInt   read FDst      write FDst;
-    property Alpha   : TFloat  read FAlpha    write FAlpha;
-    property Equation: TUInt   read FEquation write FEquation;
+    [TXMLSerial] property Enable  : Boolean read FEnable   write FEnable;
+    [TXMLSerial] property Src     : TUInt   read FSrc      write FSrc;
+    [TXMLSerial] property Dst     : TUInt   read FDst      write FDst;
+    [TXMLSerial] property Alpha   : TFloat  read FAlpha    write FAlpha;
+    [TXMLSerial] property Equation: TUInt   read FEquation write FEquation;
   public
     constructor Create;
     procedure SetParam(const AEnable: Boolean; const ASrc, ADst: TUInt);
@@ -298,10 +298,10 @@ type
 //Область объекта
    TGUIObjectRect = record
      public
-       X     : Integer; //Позиция по X
-       Y     : Integer; //Позиция по Y
-       Width : Integer; //Ширина
-       Height: Integer; //Высота
+       [TXMLSerial] X     : Integer; //Позиция по X
+       [TXMLSerial] Y     : Integer; //Позиция по Y
+       [TXMLSerial] Width : Integer; //Ширина
+       [TXMLSerial] Height: Integer; //Высота
      public
        procedure SetPos(pX, pY: Integer);
        procedure SetRect(pRect: TGUIObjectRect); overload;
@@ -310,6 +310,8 @@ type
      public
        //Нарисовать квадрат по размерам
        procedure Render(pOffset: Integer = 0; pMode: TUInt = GL_LINE_LOOP);
+       function ToString: String; overload;
+
    end;
 
 //===========================================
@@ -640,13 +642,13 @@ end;
 
 constructor TVertexClass.Create(pX, pY: TFloat; pColor: TColor; pTU, pTV: TFloat; pGroup: Byte; pHide: Boolean);
 begin
-  Color   := TGLColor.Create;
+  Color    := TGLColor.Create;
   SetCoord(pX, pY);
   SetColor(pColor);
   SetTexCoord(pTU, pTV);
-  Group   := pGroup;
-  Hide    := pHide;
-  GapOccur:= False;
+  Group    := pGroup;
+  Hide     := pHide;
+  GapOccur := False;
 end;
 
 destructor TVertexClass.Destroy;
@@ -881,6 +883,11 @@ procedure TGUIObjectRect.SetSize(pWidth, pHeight: Integer);
 begin
   Width := pWidth;
   Height:= pHeight;
+end;
+
+function TGUIObjectRect.ToString: String;
+begin
+  Result:= Format('X=%d, Y=%d, Width=%d, Height=%d', [X, Y, Width, Height]);
 end;
 
 { TTextureError }

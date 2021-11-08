@@ -18,14 +18,16 @@ uses dlGUITypes, Graphics, Classes, SysUtils;
 
 type
   TGUIVertexList = class
-    private
+    strict private
       FVertexList: TList;
-    private
+    strict private
       function GetCount: Integer;
       function GetVertex(pIndex: Integer): TVertexClass;
     public
       constructor Create;
 
+      //
+      procedure MakeLine(pX, pY, pX2, pY2: TFloat; pVColor1, pVColor2: TColor; pGroup: Byte = 0; pHide: Boolean = false);
       //Добавить 4 вершины
       procedure MakeSquare(pX, pY, pWidth, pHeight: TFloat; pVColor: TColor; pTextureLink: TTextureLink; pGroup: Byte = 0; pHide: Boolean = false); overload;
       procedure MakeSquare(pX, pY, pWidth, pHeight: TFloat; pVColor1, pVColor2, pVColor3, pVColor4: TColor; pTextureLinkArr: TTextureLinkSquadArr; pGroup: Byte = 0; pHide: Boolean = false); overload;
@@ -33,7 +35,7 @@ type
       procedure MakeSquareOffset(pLink: Integer; pOffset: integer; pColor: TColor; pTextureLinkArr: TTextureLinkSquadArr; pGroup: Byte = 0; pHide: Boolean = false); overload;
       procedure MakeSquareOffset(pLink: Integer; pOffset: integer; pVColor1, pVColor2, pVColor3, pVColor4: TColor; pTextureLinkArr: TTextureLinkSquadArr; pGroup: Byte = 0; pHide: Boolean = false); overload;
       //Добавить вершину в список
-      procedure Make(pX, pY: TFloat; pColor: TColor; pTU, pTV: TFloat; pGroup: Byte = 0; pHide: Boolean = false);
+      function Make(pX, pY: TFloat; pColor: TColor; pTU, pTV: TFloat; pGroup: Byte = 0; pHide: Boolean = false): TVertexClass;
       //Проверить есть ли вершина по индексу
       function IsExists(pIndex: Integer): Boolean;
       //Установить цвет вершине по индексу
@@ -80,18 +82,25 @@ end;
 
 procedure TGUIVertexList.SetGroupColor(pGroup: Byte; pColor: TColor);
 var FID: Integer;
+    Vertex: TVertexClass;
 begin
   if not Assigned(FVertexList) then
     Exit;
 
   for FID := 0 to FVertexList.Count - 1 do
-    if TVertexClass(FVertexList.Items[FID]).Group = pGroup then
-      TVertexClass(FVertexList.Items[FID]).Color.SetColor(pColor);
+  begin
+    Vertex:= TVertexClass(FVertexList.Items[FID]);
+    if Vertex.Group <> pGroup then
+      Continue;
+
+    Vertex.Color.SetColor(pColor);
+  end;
 end;
 
 procedure TGUIVertexList.SetGroupColorSquare(pGroup: Byte; const ColorArr: array of TColor);
-var FID  : Integer;
-    Index: Integer;
+var FID   : Integer;
+    Index : Integer;
+    Vertex: TVertexClass;
 begin
   if not Assigned(FVertexList) then
     Exit;
@@ -102,16 +111,17 @@ begin
   Index:= -1;
 
   for FID := 0 to FVertexList.Count - 1 do
-    with TVertexClass(FVertexList.Items[FID]) do
-      if Group = pGroup then
-      begin
-        Inc(Index);
+  begin
+    Vertex:= TVertexClass(FVertexList.Items[FID]);
+    if Vertex.Group <> pGroup then
+      Continue;
 
-        if Index > High(ColorArr) then
-          Break;
+    Inc(Index);
+    if Index > High(ColorArr) then
+      Break;
 
-        TVertexClass(FVertexList.Items[FID]).Color.SetColor(ColorArr[Index]);
-      end;
+    Vertex.Color.SetColor(ColorArr[Index]);
+  end;
 end;
 
 procedure TGUIVertexList.SetGroupHide(pGroup: Byte; pHide: Boolean);
@@ -144,11 +154,7 @@ procedure TGUIVertexList.SetVertexShowInList(pShow: Boolean; pVertexIndexList: a
 
     for i := 0 to High(pVertexIndexList) do
       if pIndex = pVertexIndexList[i] then
-      begin
-        Result:= True;
-        Break;
-      end;
-
+        Exit(True);
   end;
 
 var i: integer;
@@ -217,9 +223,16 @@ begin
   TVertexClass(FVertexList.Items[pIndex]).SetTexCoord(pU, pV);
 end;
 
-procedure TGUIVertexList.Make(pX, pY: TFloat; pColor: TColor; pTU, pTV: TFloat; pGroup: Byte = 0; pHide: Boolean = false);
+function TGUIVertexList.Make(pX, pY: TFloat; pColor: TColor; pTU, pTV: TFloat; pGroup: Byte = 0; pHide: Boolean = false): TVertexClass;
 begin
-  FVertexList.Add(TVertexClass.Create(pX, pY, pColor, pTU, pTV, pGroup, pHide))
+  Result:= TVertexClass.Create(pX, pY, pColor, pTU, pTV, pGroup, pHide);
+  FVertexList.Add(Result);
+end;
+
+procedure TGUIVertexList.MakeLine(pX, pY, pX2, pY2: TFloat; pVColor1, pVColor2: TColor; pGroup: Byte = 0; pHide: Boolean = false);
+begin
+  Make(pX , pY , pVColor1, 0, 0, pGroup, pHide);
+  Make(pX2, pY2, pVColor2, 1, 1, pGroup, pHide).GapOccur:= True;
 end;
 
 procedure TGUIVertexList.MakeSquare(pX, pY, pWidth, pHeight: TFloat; pVColor: TColor; pTextureLinkArr: TTextureLinkSquadArr;
@@ -250,7 +263,7 @@ begin
 
   X:= Vertex[pLink + 3].Vertex.X;
   Y:= Vertex[pLink + 3].Vertex.Y;
-  Make(X + pOffset, Y - pOffset, pVColor4, pTextureLinkArr.Index[3].U, pTextureLinkArr.Index[3].V, pGroup, pHide);
+  Make(X + pOffset, Y - pOffset, pVColor4, pTextureLinkArr.Index[3].U, pTextureLinkArr.Index[3].V, pGroup, pHide).GapOccur:= True;
 end;
 
 procedure TGUIVertexList.MakeSquareOffset(pLink, pOffset: integer;
@@ -277,7 +290,7 @@ begin
   Make(pX         , pY          , pVColor1, pTextureLinkArr.Index[0].U, pTextureLinkArr.Index[0].V, pGroup, pHide);
   Make(pX + pWidth, pY          , pVColor2, pTextureLinkArr.Index[1].U, pTextureLinkArr.Index[1].V, pGroup, pHide);
   Make(pX + pWidth, pY + pHeight, pVColor3, pTextureLinkArr.Index[2].U, pTextureLinkArr.Index[2].V, pGroup, pHide);
-  Make(pX         , pY + pHeight, pVColor4, pTextureLinkArr.Index[3].U, pTextureLinkArr.Index[3].V, pGroup, pHide);
+  Make(pX         , pY + pHeight, pVColor4, pTextureLinkArr.Index[3].U, pTextureLinkArr.Index[3].V, pGroup, pHide).GapOccur:= True;
 end;
 
 function TGUIVertexList.IsExists(pIndex: Integer): Boolean;
@@ -291,17 +304,14 @@ begin
 end;
 
 destructor TGUIVertexList.Destroy;
-var FID   : Integer;
-    Vertex: TVertexClass;
+var i: Integer;
 begin
-  for FID := 0 to FVertexList.Count - 1 do
+  for i:= 0 to FVertexList.Count - 1 do
   begin
-    Vertex:= TVertexClass(FVertexList.Items[FID]);
-     if Assigned(Vertex) then
-       Vertex.Destroy;
+    TVertexClass(FVertexList.Items[i]).Free;
+    FVertexList[i]:= nil;
   end;
 
-  FVertexList.Clear;
   FreeAndNil(FVertexList);
   inherited;
 end;
@@ -317,22 +327,25 @@ begin
 end;
 
 function TGUIVertexList.GetGroupColor(pGroup: Byte; pVertexIndex: Integer): TColor;
-var FID  : Integer;
-    Index: Integer;
+var i     : Integer;
+    Index : Integer;
+    Vertex: TVertexClass;
 begin
   Result:= 0;
   Index := -1;
 
-  for FID := 0 to FVertexList.Count - 1 do
-    with TVertexClass(FVertexList.Items[FID]) do
-      if Group = pGroup then
-      begin
-        Inc(Index);
-        if Index = pVertexIndex then begin
-          Result:= TVertexClass(FVertexList.Items[FID]).Color.GetColor;
-          Break;
-        end;
-      end;
+  for i := 0 to FVertexList.Count - 1 do
+  begin
+    Vertex:= TVertexClass(FVertexList.Items[i]);
+    if Vertex.Group <> pGroup then
+      Continue;
+
+    Inc(Index);
+    if Index <> pVertexIndex then
+      Continue;
+
+    Exit(Vertex.Color.GetColor);
+  end;
 end;
 
 function TGUIVertexList.GetVertex(pIndex: Integer): TVertexClass;

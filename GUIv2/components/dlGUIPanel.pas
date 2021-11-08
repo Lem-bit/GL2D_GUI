@@ -2,7 +2,7 @@
 
 interface
 
-uses dlGUITypes, dlGUIObject, dlGUIPaletteHelper;
+uses dlGUITypes, dlGUIObject, dlGUIPaletteHelper, dlGUIXmlSerial;
 
 {
   ====================================================
@@ -18,35 +18,35 @@ uses dlGUITypes, dlGUIObject, dlGUIPaletteHelper;
 
 type
   TGUIPanel = class(TGUIObject)
-    private
+    strict private
       //Рамка
       FBorder: Integer;
-    private
+    strict private
       procedure SetBorder(value: Integer);
       procedure ResizeBorder;
     protected
       procedure SetResize; override;
     public
-      constructor Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
+      constructor Create(pName: String = ''; pTextureLink: TTextureLink = nil);
     public
-      property Border: Integer read FBorder write SetBorder;
+      [TXMLSerial] property Border: Integer read FBorder write SetBorder;
   end;
 
 implementation
 
 { TGUIPanel }
 
-constructor TGUIPanel.Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink);
+constructor TGUIPanel.Create(pName: String = ''; pTextureLink: TTextureLink = nil);
 begin
   inherited Create(pName, gtcObject);
 
-  SetRect(pX, pY, 200, 200);
+  SetRect(0, 0, 200, 200);
 
   SetTextureLink(pTextureLink);
 
   FBorder:= 1;
 
-  VertexList.MakeSquare(0, 0, Width, Height, Color, GUIPalette.GetCellRect(pal_6));
+  VertexList.MakeSquare(Rect.X, Rect.Y, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_6));
   VertexList.MakeSquare(FBorder, FBorder, Width - (FBorder * 2), Height - (FBorder * 2), Color, GUIPalette.GetCellRect(pal_Window));
 end;
 

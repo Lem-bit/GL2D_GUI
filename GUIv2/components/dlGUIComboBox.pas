@@ -2,7 +2,8 @@
 
 interface
 
-uses Classes, SysUtils, dlGUITypes, dlGUIObject, dlGUIEditBox, dlGUIButton, dlGUIListBox, dlGUIPaletteHelper;
+uses Classes, SysUtils, dlGUITypes, dlGUIObject, dlGUIEditBox, dlGUIButton, dlGUIListBox, dlGUIPaletteHelper,
+  dlGUIXMLSerial;
 
 {
   ====================================================
@@ -18,11 +19,12 @@ uses Classes, SysUtils, dlGUITypes, dlGUIObject, dlGUIEditBox, dlGUIButton, dlGU
 
 type
   TGUIComboBox = class(TGUIObject)
-    private
-      FComponent : TList;
+    strict private
+      [TXMLSerial] FComponent : TList;
       FItemIndex : Integer; //Выбранный элемент меню
       FButtonSize: Integer;
-    private
+      FListHeight: Integer; //Высота списка
+    strict private
       type
         TElement = (eEdit, eButton, eList);
 
@@ -48,7 +50,7 @@ type
        //Установить ссылку на текстуру
        procedure SetTextureLink(pTextureLink: TTextureLink); override;
     public
-      constructor Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
+      constructor Create(pName: String = ''; pTextureLink: TTextureLink = nil);
 
       destructor Destroy; override;
 
@@ -78,8 +80,8 @@ type
       procedure SaveToFile(const AFileName: String);
     public
       property Item[index: integer]: TGUIListBoxItem read GetItem;
-      property Text     : String  read GetText     write SetText;
-      property ItemIndex: Integer read FItemIndex;
+      [TXMLSerial] property Text     : String  read GetText write SetText;
+      [TXMLSerial] property ItemIndex: Integer read FItemIndex;
   end;
 
 implementation
@@ -120,19 +122,19 @@ begin
     Result:= 0;
 end;
 
-constructor TGUIComboBox.Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink);
+constructor TGUIComboBox.Create(pName: String = ''; pTextureLink: TTextureLink = nil);
 begin
   inherited Create(pName, gtcComboBox);
 
   FComponent:= TList.Create;
-  SetRect(pX, pY, 150, 19);
+  SetRect(0, 0, 150, 19);
 
   FButtonSize:= Rect.Height;
-  Area.Show := True;
+  Area.Show  := True;
 
-  FComponent.Add(TGUIEditBox.Create('cbEdit', 0, 0, pTextureLink));
-  FComponent.Add(TGUIButton.Create('cbButton', '', 0, 0, pTextureLink));
-  FComponent.Add(TGUIListBox.Create('cbList' , 0, 0, pTextureLink));
+  FComponent.Add(TGUIEditBox.Create('cbEdit' , pTextureLink));
+  FComponent.Add(TGUIButton.Create('cbButton', pTextureLink));
+  FComponent.Add(TGUIListBox.Create('cbList' , pTextureLink));
 
   SetTextureLink(pTextureLink);
 
@@ -147,7 +149,8 @@ begin
   FButton.OnClick:= OnButtonClick;
   ChangeButtonImage;
 
-  Height:= 200;
+  FShowOnTop := True;
+  FListHeight:= 200;
 
   SetResize;
 end;
@@ -246,6 +249,7 @@ begin
   if not FEnable then
     Exit;
 
+  FList.Height:= FListHeight;
   FList.Hide:= not FList.Hide;
   FList.VisibleVTracker(not FList.Hide);
   ChangeButtonImage;
@@ -351,8 +355,8 @@ end;
 procedure TGUIComboBox.OnMouseUp(pX, pY: Integer; Button: TGUIMouseButton);
 var i: integer;
 begin
-  if goaDown in FEdit.GetAction then
-    OnButtonClick(nil, nil);
+ { if goaDown in FEdit.GetAction then
+    OnButtonClick(nil, nil);}
 
   for i := 0 to FComponent.Count - 1 do
     TGUIObject(FComponent[i]).OnMouseUp(pX, pY, Button);

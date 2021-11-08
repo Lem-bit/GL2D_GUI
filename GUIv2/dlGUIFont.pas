@@ -2,7 +2,7 @@
 
 interface
 
- uses dlGUITypes, dlGUICodePage, Windows, Graphics, System.Classes, SysUtils, dlOpenGL;
+ uses dlGUITypes, dlGUICodePage, Windows, Graphics, System.Classes, SysUtils, dlOpenGL, dlGUIXMLSerial;
 
 {
   ====================================================
@@ -112,18 +112,18 @@ interface
        //
        procedure SetScale(pScale: TFloat);
      public
-       property _State  : TGUIFontStatus   read FStatus     write FStatus;
-       property _Setter : TGUIFontSetterA  read FSetter;
+       property _State: TGUIFontStatus     read FStatus     write FStatus;
+       property _Setter: TGUIFontSetterA   read FSetter;
 
-       property Color   : TColor           read GetColor    write SetColor;
        property ColorObj: TGLColor         read FColor;
        property CharInfo: TGUIFontCharInfo read FCharInfo;
        property ShowArea: Boolean          read FShowArea   write FShowArea;
 
-       property Height  : TFloat           read GetHeight;
-     published
-       property TextureName: String        read GetTextureName;
-       property Scale      : TFloat        read FScale      write SetScale;
+       property Height: TFloat             read GetHeight;
+     public
+       [TXMLSerial] property TextureName: String read GetTextureName;
+       [TXMLSerial] property Color: TColor       read GetColor        write SetColor;
+       [TXMLSerial] property Scale: TFloat       read FScale          write SetScale;
    end;
    PGUIFont = ^TGUIFont;
 
@@ -399,7 +399,7 @@ begin
           end;
 
         char_id:= GUILocale.GetIndexChar(pText[FID]);
-        if (pMaxWidth > 0) and (((abs_pos + FCharInfo[char_id].Width) * FScale) >= pMaxWidth) then
+        if (pMaxWidth > 0) and (((abs_pos + FCharInfo[char_id].Width) * FScale) > pMaxWidth) then
           Break;
 
         //Отобразить символ

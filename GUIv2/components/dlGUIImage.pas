@@ -2,7 +2,7 @@
 
 interface
 
-uses Graphics, dlGUITypes, dlGUIObject;
+uses Graphics, dlGUITypes, dlGUIObject, dlGUIXmlSerial;
 
 {
   ====================================================
@@ -20,42 +20,29 @@ uses Graphics, dlGUITypes, dlGUIObject;
    TGUIImage = class(TGUIObject)
      strict private
        FProportion: Boolean;
-
+     strict private
        procedure SetProportion(value: Boolean);
      protected
        procedure SetResize; override; //Применить к вершинам масштабирование Width, Height
      public
-       constructor Create(pName: String; pX, pY, pW, pH: Integer; pTextureLink: TTextureLink = nil);
+       constructor Create(pName: String = ''; pTextureLink: TTextureLink = nil);
        procedure SetImageLink(const ATextureLink: TTextureLink);
      published
-       property Proportion: Boolean read FProportion write SetProportion;
-
-       property ObjectType;
-       property Name;
-       property X;
-       property Y;
-       property Width;
-       property Height;
-       property TextureName;
-       //классы
-       property Parent;
-       property PopupMenuName;
-       property Hint;
-       property Blend;
+       [TXMLSerial] property Proportion: Boolean read FProportion write SetProportion;
    end;
 
 implementation
 
 { TGUIImage }
 
-constructor TGUIImage.Create(pName: String; pX, pY, pW, pH: Integer; pTextureLink: TTextureLink = nil);
+constructor TGUIImage.Create(pName: String = ''; pTextureLink: TTextureLink = nil);
 begin
   inherited Create(pName, gtcImage);
-  SetRect(pX, pY, pW, pH);
+  SetRect(0, 0, 200, 200);
 
   FProportion:= False;
   Area.Show  := True;
-  VertexList.MakeSquare(0, 0, pW, pH, FColor.GetColor, pTextureLink);
+  VertexList.MakeSquare(Rect.X, Rect.Y, Rect.Width, Rect.Height, FColor.GetColor, pTextureLink);
 
   SetImageLink(pTextureLink);
 end;

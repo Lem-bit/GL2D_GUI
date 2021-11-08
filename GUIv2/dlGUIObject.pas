@@ -2,7 +2,8 @@
 
 interface
 
-uses RTTI, Classes, Graphics, SysUtils, dlOpenGL, dlGUITypes, dlGUITypesRTTI, dlGUIFont, dlGUIVertexController, TypInfo;
+uses RTTI, Classes, Graphics, SysUtils, dlOpenGL, dlGUITypes, dlGUIFont, dlGUIVertexController, TypInfo,
+  dlGUIXmlSerial;
 
 {
   ====================================================
@@ -113,32 +114,30 @@ type
        procedure SetEnable(pEnable: Boolean);
        procedure SetBackgroundColor(pColor: TColor);
      published
-       property Text  : String          read FText    write SetText;
-       property Color : TColor          read FColor   write SetColor;
-       property Enable: Boolean         read FEnable  write SetEnable;
-       property BackgroundColor: TColor read FBGColor write SetBackgroundColor;
+       [TXMLSerial] property Text  : String          read FText    write SetText;
+       [TXMLSerial] property Color : TColor          read FColor   write SetColor;
+       [TXMLSerial] property Enable: Boolean         read FEnable  write SetEnable;
+       [TXMLSerial] property BackgroundColor: TColor read FBGColor write SetBackgroundColor;
    end;
 
    //Объект от которого наследуются компоненты
    TGUIObject = class(TPersistent)
-     private
+     strict private
        FName        : String; //Название объекта
        FDefName     : String; //Имя данное автоматически (для подставки ID, SetID())
        FType        : TGUITypeComponent; //Тип компонента
      protected
        FUID         : Integer; //Номер объекта в листе
-     protected
        FRect        : TGUIObjectRect; //Позиция и размеры
        FTextOffset  : TGUIObjectRect; //Положение текста
        FHide        : Boolean; //Видимость
        FEnable      : Boolean; //Активный компонент или нет
        FAction      : TGUIObjectAction; //Действия над объектом
-     protected
        FHint        : TGUIHintObject; //Всплывающая подсказка
-     protected
        FTextureInfo : TGUITextureInfo; //Информация о размерах текстуры
+       FShowOnTop   : Boolean; //При фокусе переместить объект в самый конец списка (для ComboBox например)
      private
-       FTextureLink : TTextureLink; //Ссылка на текстуру
+       FTextureLink : TTextureLink;
      protected
        FScale       : TFloat; //Увеличение
        FFont        : TGUIFont; //Шрифт
@@ -167,7 +166,7 @@ type
        procedure SetEnable(pEnable: Boolean); virtual;
        procedure SetColor(pColor: TColor); virtual;
        procedure SetAreaResize; virtual;
-     private
+     strict private
        function GetColor: TColor;
        function GetTextureLinkName: String;
        function GetAttrFocused: Boolean;
@@ -189,54 +188,45 @@ type
        procedure SetTextureCopyFrom(pTextureLink: TTextureLink);
        //Получить ссылку на текущую текстуру
        function GetTextureLink: TTextureLink;
+       //Установить позицию компонента
+       procedure SetPos(pX, pY: Integer);
        //Установить размеры компонента
        procedure SetRect(pX, pY, pW, pH: Integer);
        //Получить какой то другой активный popup например у ListBox
        function GetChildItemPopup: TGUIObject; virtual;
-       //Вызвать SetResize
-       procedure OnResize;
-     public
-       {RTTI}
-       //Получить список публичных свойств
-       procedure RTTIGetObjectPropList(pObj: TObject; var pList: TStringList; pIgnoreList: TStringList = nil);
-       function RTTIGetPublishedList(pIgnoreList: TStringList = nil): String; virtual;
-       //Получить список процедур и значения
-       function RTTIGetProcList: String;
-       function RTTIGetProcName(pProc: TGUIProc): String;
-
-       {RTTI Import}
-       procedure RTTISetFromList(pObj: TObject; pList: TStringList);
-     public
-       OnClick               : TGUIProc; //Нажатие на компонент мышью
+       //Вызвать SetFontEvent, SetResize
+       procedure ProcessEvents;
      public
        property VertexList   : TGUIVertexList    read FVertexList;
        property ID           : Integer           read FUID                write SetID;
-       property Rect         : TGUIObjectRect    read FRect;
        property TextRect     : TGUIObjectRect    read FTextOffset         write FTextOffset;
        property Focused      : Boolean           read GetAttrFocused;
-
-       property Name         : String            read FName;
-       property ObjectName   : String            read FDefName;
-       property ObjectType   : TGUITypeComponent read FType;
-
+       property ShowOnTop    : Boolean           read FShowOnTop;
+       property PopupMenuName: String            read GetPopupMenuName;
        property X            : Integer           read FRect.X             write FRect.X;
        property Y            : Integer           read FRect.Y             write FRect.Y;
        property Width        : Integer           read FRect.Width         write SetWidth;
        property Height       : Integer           read FRect.Height        write SetHeight;
-       property Color        : TColor            read GetColor            write SetColor;
 
+     //[TXMLSerial] ---
+     public
+       [TXMLSerial] OnClick: TGUIProc; //Нажатие на компонент мышью
+     public
+       [TXMLSerial] property Name: String read FName;
+     public
+       property Rect         : TGUIObjectRect    read FRect;
+       property ObjectName   : String            read FDefName;
+       property ObjectType   : TGUITypeComponent read FType;
+       property Color        : TColor            read GetColor            write SetColor;
        property Hide         : Boolean           read FHide               write SetHide;
        property Enable       : Boolean           read FEnable             write SetEnable;
-
        property TextureName  : String            read GetTextureLinkName;
        property Font         : TGUIFont          read FFont               write SetFontLink;
        property PopupMenu    : TGUIObject        read FPopupMenu          write SetPopupMenu;
        property Parent       : TGUIObject        read FParent             write FParent;
        property Scale        : TFloat            read FScale              write SetScale;
        property Hint         : TGUIHintObject    read FHint               write FHint;
-
        property Blend        : TBlendParam       read FBlend              write FBlend;
-       property PopupMenuName: String            read GetPopupMenuName;
        property Area         : TGUITypeArea      read FArea               write FArea;
      public
        constructor Create(pName: String = ''; pType: TGUITypeComponent = gtcObject);
@@ -311,6 +301,7 @@ begin
   FUID          := -1;
   FRect.SetRect(0, 0, 0, 0);
   FTextOffset.SetRect(0, 0, 0, 0);
+  FShowOnTop    := False;
   FHide         := False;
   FEnable       := True;
   FAction       := [];
@@ -385,240 +376,6 @@ begin
     Exit;
 
   Result:= PopupMenu.Name;
-end;
-
-function TGUIObject.RTTIGetProcName(pProc: TGUIProc): String;
-var Context: TRttiContext;
-    Typ    : TRttiType;
-    Method : TRttiMethod;
-begin
-  Result:= '';
-
-  Context:= TRttiContext.Create;
-
-  try
-    Typ := Context.GetType(TObject(TMethod(pProc).Data).ClassType);
-
-    for Method in Typ.GetMethods do
-      if Method.CodeAddress = TMethod(pProc).Code then
-      begin
-        Result:= Method.Name;
-        Break;
-      end;
-
-  finally
-    Context.Free;
-  end;
-end;
-
-function TGUIObject.RTTIGetProcList: String;
-var Context: TRttiContext;
-    Typ    : TRttiType;
-    Field  : TRttiField;
-    rtValue: TValue;
-    Buf    : TStringList;
-
-    ProcContext: TRttiContext;
-    ProcType   : TRttiType;
-    Method     : TRttiMethod;
-    Proc       : TGUIProc;
-
-    ProcName : String;
-    ProcValue: String;
-begin
-  Buf:= TStringList.Create;
-  Buf.Add(objRTTI.RawFormat(rawProc, Self));
-
-  Context:= TRttiContext.Create;
-  Typ := Context.GetType(TGUIObject(Self).ClassType);
-
-  if not Assigned(Typ) then
-    Exit;
-
-  for Field in Typ.GetFields do begin
-
-    if Field.FieldType = nil then Continue;
-    if not Assigned(Field.FieldType.Handle)            then Continue;
-    if not (Field.FieldType.Handle^.Kind = tkMethod)   then Continue;
-    if not (Field.FieldType.Handle^.Name = 'TGUIProc') then Continue;
-
-    rtValue:= context.GetType(Self.ClassType).GetField(Field.Name).GetValue(Self);
-
-    if rtValue.Kind <> tkMethod then
-      Continue;
-
-    //Название "метода" процедуры
-    ProcName:= Field.Name;
-
-    //Название процедуры
-    if rtValue.IsEmpty then
-    begin
-      ProcValue:= '';
-      Buf.Add(ProcName + '=' + ProcValue);
-      Continue;
-    end;
-
-    //Получаем ссылку на метод
-    Proc:= TGUIProc(PMethod(rtValue.GetReferenceToRawData())^);
-
-    //Создаем новый контекст
-    ProcContext:= TRttiContext.Create;
-
-    try
-      //Из основного контекста узнаем тип
-      ProcType:= Context.GetType(TObject(TMethod(Proc).Data).ClassType);
-
-      for Method in ProcType.GetMethods do
-        if Method.CodeAddress = TMethod(Proc).Code then
-        begin
-          ProcValue:= Method.Name;
-          Break;
-        end;
-
-    finally
-      ProcContext.Free;
-    end;
-
-    Buf.Add(objRTTI.RawValue(ProcName, ProcValue));
-  end;
-
-  Buf.Add(objRTTI.RawFormat(rawEndProc, Self));
-
-  Result:= Buf.Text;
-  Buf.Free;
-end;
-
-procedure TGUIObject.RTTIGetObjectPropList(pObj: TObject; var pList: TStringList; pIgnoreList: TStringList = nil);
-var PropCount : Integer;
-    PropList  : PPropList;
-    PropInfo  : PPropInfo;
-    i         : integer;
-    PropName  : String;
-    PropValue : String;
-    PropType  : TTypeInfo;
-
-    PropObject: TObject;
-begin
-  if not Assigned(pList) then
-    Exit;
-
-  //Получаем список published property
-  PropCount:= GetPropList(pObj, PropList);
-  if (not Assigned(PropList)) or (PropCount < 1) then
-    Exit;
-
-  //Перебираем все свойства и записываем
-  try
-    for I := 0 to PropCount - 1 do
-    begin
-      PropInfo := PropList^[I];
-      PropType := PropInfo.PropType^^;
-      PropName := String(PropList^[i].Name);
-      PropValue:= StringReplace(GetPropValue(pObj, PropInfo), #13, 'n\', [rfReplaceAll]);
-
-      //Ищем в списке игнорируемых свойств
-      if pIgnoreList <> nil then
-        if pIgnoreList.IndexOf(PropName) > -1 then
-          Continue;
-
-      if (PropType.Kind = tkClass) then
-      begin
-        PropObject:= GetObjectProp(pObj, PropInfo);
-        if not Assigned(PropObject) then Continue;
-
-        if SameText(PropObject.ClassName, 'TGUIPopupMenu') then
-        begin
-          pList.Add(objRTTI.RawFormat(rawClass, PropObject));
-          pList.Add(TGUIObject(PropObject).RTTIGetPublishedList(pList));
-          pList.Add(objRTTI.RawFormat(rawEndClass, PropObject));
-          Continue;
-        end;
-
-        if SameText(String(PropType.Name), Self.ClassParent.ClassName) then Continue;
-
-        pList.Add(objRTTI.RawFormat(rawClass, PropObject));
-        RTTIGetObjectPropList(PropObject, pList);
-        pList.Add(objRTTI.RawFormat(rawEndClass, PropObject));
-      end
-      else
-        pList.Add(objRTTI.RawValue(PropName, PropValue));
-
-    end;
-
-  except
-
-  end;
-end;
-
-function TGUIObject.RTTIGetPublishedList(pIgnoreList: TStringList = nil): String;
-var Buf : TStringList;
-begin
-  Result:= '';
-  Buf:= TStringList.Create;
-
-  try
-    Buf.Add(objRTTI.RawFormat(rawObject, Self));
-      RTTIGetObjectPropList(Self, Buf, pIgnoreList);
-    Buf.Add(objRTTI.RawFormat(rawEndObject, Self));
-
-    Result:= Buf.Text;
-
-    Buf.SaveToFile('.\Published\' + Self.ClassName + '_' + TGUITypeDefNames[Self.FType].Name + '.txt');
-  finally
-    Buf.Free;
-  end;
-
-end;
-
-procedure TGUIObject.RTTISetFromList(pObj: TObject; pList: TStringList);
-var PropCount : Integer;
-    PropList  : PPropList;
-    PropInfo  : PPropInfo;
-    i, j      : integer;
-    PropName  : String;
-    PropValue : String;
-    PropType  : TTypeInfo;
-
-    PropObject: TObject;
-    Str: String;
-    Value     : Variant;
-begin
-  if not Assigned(pList) then
-    Exit;
-
-  //Получаем список published property
-  PropCount:= GetPropList(Self, PropList);
-   if (not Assigned(PropList)) or (PropCount < 1) then
-     Exit;
-
-  //Перебираем все свойства и записываем
-  try
-    for I := 0 to PropCount - 1 do
-    begin
-      PropInfo := PropList^[I];
-      PropType := PropInfo.PropType^^;
-      PropName := String(PropList^[i].Name);
-      PropValue:= GetPropValue(Self, PropInfo);
-      PropObject:= GetObjectProp(Self, PropInfo);
-
-      Str:= '';
-      for j := 0 to pList.Count - 1 do
-        if Copy(pList[j], 1, Length(PropName)) = PropName then
-        begin
-          str:= pList[j];
-
-          Value:= Copy(str, pos('=', str) + 1, Length(str));
-          Break;
-        end;
-
-      if Str = '' then Continue;
-
-      SetPropValue(PropObject, PropInfo, Value);
-
-    end;
-  except
-
-  end;
 end;
 
 function TGUIObject.GetTextureLink: TTextureLink;
@@ -770,14 +527,15 @@ begin
     Exit;
 end;
 
-procedure TGUIObject.OnResize;
-begin
-  SetResize;
-end;
-
 procedure TGUIObject.OutHit(pX, pY: Integer);
 begin
   RemoveAction([goaDown, goaFocused]);
+end;
+
+procedure TGUIObject.ProcessEvents;
+begin
+  SetFontEvent;
+  SetResize;
 end;
 
 procedure TGUIObject.Render;
@@ -927,6 +685,12 @@ begin
     FPopupMenu.Parent:= Self;
   finally
   end;
+end;
+
+procedure TGUIObject.SetPos(pX, pY: Integer);
+begin
+  X:= pX;
+  Y:= pY;
 end;
 
 procedure TGUIObject.SetTextureCopyFrom(pTextureLink: TTextureLink);

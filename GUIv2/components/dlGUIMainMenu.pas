@@ -15,24 +15,28 @@ type
         DEF_ITEM_HEIGHT = 20;
         DEF_LINE_HEIGHT = 10;
     strict private
-      FCaption   : String;
-      FType      : TGUIMainMenuItemType;
-      FYPos      : Integer; //Координата текста по Y
+      FCaption     : String;
+      FType        : TGUIMainMenuItemType;
+      FYPos        : Integer; //Координата текста по Y
+      FBufColor    : TColor;  //Старый цвет шрифта когда элемент активный
+      FColorDisable: TColor;  //Цвет не активного элемента
 
-      FChild     : TGUIMainMenuGroup;
+      FChild       : TGUIMainMenuGroup;
     strict private
-      procedure SetChild(value: TGUIMainMenuGroup);
-      procedure SetCaption(value: string);
+      procedure SetChild(AValue: TGUIMainMenuGroup);
+      procedure SetCaption(AValue: string);
       procedure CalcTextYPos;
     private
       FShowChild : Boolean; //
       function ParentExists: Boolean;
       procedure HideChild;
+      procedure SetDisableColor(value: TColor);
     protected
       procedure SetFontEvent; override;
       procedure SetResize; override;
+      procedure SetEnable(pEnable: Boolean); override;
     public
-      constructor Create(const ACaptionName: String; pFont: TGUIFont; pTextureLink: TTextureLink = nil);
+      constructor Create(const ACaptionName: String; pTextureLink: TTextureLink; pFontTextureLink: TTextureLink);
       destructor Destroy; override;
       function OnHit(pX, pY: Integer): Boolean; override;
       function OnHitStd(pX, pY: Integer): Boolean;
@@ -46,9 +50,10 @@ type
       procedure Render; override;
       procedure RenderText; override;
     public
-      property Caption : String               read FCaption write SetCaption;
+      property ColorDisable: TColor           read FColorDisable write SetDisableColor;
+      property Caption : String               read FCaption      write SetCaption;
       property ItemType: TGUIMainMenuItemType read FType;
-      property Child   : TGUIMainMenuGroup    read FChild   write SetChild;
+      property Child   : TGUIMainMenuGroup    read FChild        write SetChild;
   end;
 
   TGUIMainMenuGroup = class(TGUIObject)
@@ -66,6 +71,7 @@ type
       procedure SetCaption(value: string);
       function ItemExists(index: integer): Boolean;
       function GetMainMenuItem(index: integer): TGUIMainMenuItem;
+      function GetMainMenuItemStr(AValue: String): TGUIMainMenuItem;
       procedure SetShow(value: Boolean);
       procedure SetOffsetLeft(value: Integer);
       procedure RecalcMaxWidth;
@@ -75,13 +81,18 @@ type
       procedure SetFontEvent; override;
       procedure SetEnable(pEnable: Boolean); override;
     public
-      constructor Create(pX, pY, pWidth, pHeight: Integer; const pName: String; pFont: TGUIFont; pTextureLink: TTextureLink);
+      constructor Create(pX, pY, pWidth, pHeight: Integer; const pName: String; pTextureLink: TTextureLink; pFontTextureLink: TTextureLink);
       destructor Destroy; override;
       procedure Render; override;
       procedure RenderText; override;
 
       procedure Add(const AItemName: String; AProc: TGUIProc = nil);
+      procedure AddList(const AItemName: array of String);
       function Count: integer;
+
+      function GetFirstItem: TGUIMainMenuItem;
+      function GetLastItem: TGUIMainMenuItem;
+
       procedure RecalcItemPos; //При изменение свойства Show пересчитать позицию элементов
 
       procedure OutHit(pX, pY: Integer); override;
@@ -93,11 +104,12 @@ type
 
       procedure Proc(AObject: TGUIObject);
     public
-      property ColorDisable: TColor                   read FColorDisable    write SetDisableColor;
-      property Caption     : String                   read FCaption         write SetCaption;
-      property Show        : Boolean                  read FShow            write SetShow;
-      property OffsetLeft  : Integer                  read FOffsetLeft      write SetOffsetLeft;
-      property Item[index: integer]: TGUIMainMenuItem read GetMainMenuItem;
+      property ColorDisable: TColor                     read FColorDisable      write SetDisableColor;
+      property Caption     : String                     read FCaption           write SetCaption;
+      property Show        : Boolean                    read FShow              write SetShow;
+      property OffsetLeft  : Integer                    read FOffsetLeft        write SetOffsetLeft;
+      property Item[index: integer]: TGUIMainMenuItem   read GetMainMenuItem;
+      property ItemStr[index: string]: TGUIMainMenuItem read GetMainMenuItemStr;
   end;
 
   TGUIMainMenu = class(TGUIObject)
@@ -115,10 +127,10 @@ type
       function OnHitGroup(pX, pY: Integer): Boolean;
       procedure SetOpened(value: Boolean);
     public
-      constructor Create(pFont: TGUIFont; pTextureLink: TTextureLink = nil);
+      constructor Create(pName: String = ''; pTextureLink: TTextureLink = nil);
       destructor Destroy; override;
 
-      procedure Add(const AGroupName: String);
+      function Add(const AGroupName: String): TGUIMainMenuGroup;
 
       procedure OnMouseMove(pX, pY: Integer); override;
       procedure OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton); override;
@@ -138,20 +150,19 @@ implementation
 
 { TGUIMainMenu }
 
-procedure TGUIMainMenu.Add(const AGroupName: String);
-var Item: TGUIMainMenuGroup;
-    LocWidth: Integer;
+function TGUIMainMenu.Add(const AGroupName: String): TGUIMainMenuGroup;
+var LocWidth: Integer;
 begin
   LocWidth:= Round(Font.GetTextWidth(AGroupName) + 10);
 
-  Item:= TGUIMainMenuGroup.Create(FCurrOffset, 0, LocWidth, Height, AGroupName, Self.Font, Self.GetTextureLink);
-  Item.Parent:= Self;
+  Result:= TGUIMainMenuGroup.Create(FCurrOffset, 0, LocWidth, Height, AGroupName, Self.GetTextureLink, Self.Font.GetTextureLink);
+  Result.Parent:= Self;
   FCurrOffset:= FCurrOffset + LocWidth + 1;
 
-  FGroup.Add(Item);
+  FGroup.Add(Result);
 end;
 
-constructor TGUIMainMenu.Create(pFont: TGUIFont; pTextureLink: TTextureLink);
+constructor TGUIMainMenu.Create(pName: String = ''; pTextureLink: TTextureLink = nil);
 begin
   inherited Create('MainMenu', gtcMainMenu);
 
@@ -159,7 +170,6 @@ begin
   FCurrOffset:= 0;
   FOpened    := False;
 
-  Font.CopyFrom(pFont);
   SetRect(0, 0, 100, 20);
   SetTextureLink(pTextureLink);
   VertexList.MakeSquare(0, 0, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_Window));
@@ -372,7 +382,7 @@ procedure TGUIMainMenuGroup.Add(const AItemName: String; AProc: TGUIProc);
 var Item: TGUIMainMenuItem;
     ItemWidth: Integer;
 begin
-  Item:= TGUIMainMenuItem.Create(AItemName, Self.Font, Self.GetTextureLink);
+  Item:= TGUIMainMenuItem.Create(AItemName, Self.GetTextureLink, Self.Font.GetTextureLink);
   Item.OnClick:= AProc;
   Item.Parent := Self.Parent;
   FItem.Add(Item);
@@ -380,6 +390,13 @@ begin
   ItemWidth:= Item.Width;
   if ItemWidth > FMaxWidth then
     FMaxWidth:= ItemWidth;
+end;
+
+procedure TGUIMainMenuGroup.AddList(const AItemName: array of String);
+var i: integer;
+begin
+  for i := 0 to Length(AItemName) - 1 do
+    Add(AItemName[i], nil);
 end;
 
 procedure TGUIMainMenuGroup.AfterObjRender;
@@ -409,7 +426,7 @@ begin
     Result:= FItem.Count;
 end;
 
-constructor TGUIMainMenuGroup.Create(pX, pY, pWidth, pHeight: Integer; const pName: String; pFont: TGUIFont; pTextureLink: TTextureLink);
+constructor TGUIMainMenuGroup.Create(pX, pY, pWidth, pHeight: Integer; const pName: String; pTextureLink: TTextureLink; pFontTextureLink: TTextureLink);
 begin
   inherited Create('MainMenu.Group', gtcObject);
   FItem:= TList.Create;
@@ -423,7 +440,7 @@ begin
   FShow   := False;
 
   SetCaption(pName);
-  Font.CopyFrom(pFont);
+  Font.SetTextureLink(pFontTextureLink);
   SetTextureLink(pTextureLink);
   VertexList.MakeSquare(0, 0, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_Window));
 
@@ -442,6 +459,16 @@ begin
   inherited;
 end;
 
+function TGUIMainMenuGroup.GetFirstItem: TGUIMainMenuItem;
+begin
+  Result:= GetMainMenuItem(0);
+end;
+
+function TGUIMainMenuGroup.GetLastItem: TGUIMainMenuItem;
+begin
+  Result:= GetMainMenuItem(Count - 1);
+end;
+
 function TGUIMainMenuGroup.GetMainMenuItem(index: integer): TGUIMainMenuItem;
 begin
   Result:= nil;
@@ -449,6 +476,16 @@ begin
     Exit;
 
   Result:= TGUIMainMenuItem(FItem[index]);
+end;
+
+function TGUIMainMenuGroup.GetMainMenuItemStr(AValue: String): TGUIMainMenuItem;
+var i: integer;
+begin
+  Result:= nil;
+
+  for i := 0 to FItem.Count - 1 do
+    if SameText(AValue, TGUIMainMenuItem(FItem[i]).Caption) then
+      Exit(Item[i]);
 end;
 
 function TGUIMainMenuGroup.ItemExists(index: integer): Boolean;
@@ -561,7 +598,7 @@ begin
 
     if Assigned(Parent) then
       if Parent.ClassType = TGUIMainMenu then
-        if Item.ItemType = mmtItem then
+        if (Item.ItemType = mmtItem) and (Item.Enable) then
           FShow:= False;
 
   end;
@@ -748,13 +785,13 @@ begin
   FYPos:= Round((Height / 2) - (Font.GetTextHeight(FCaption) / 2)) - FTextOffset.Y;
 end;
 
-constructor TGUIMainMenuItem.Create(const ACaptionName: String; pFont: TGUIFont; pTextureLink: TTextureLink = nil);
+constructor TGUIMainMenuItem.Create(const ACaptionName: String; pTextureLink: TTextureLink; pFontTextureLink: TTextureLink);
 begin
   inherited Create('MainMenu.Item', gtcObject);
   FType:= mmtItem;
   FTextOffset.SetPos(2, 2);
 
-  Font.CopyFrom(pFont);
+  Font.SetTextureLink(pFontTextureLink);
   SetTextureLink(pTextureLink);
 
   if SameText(ACaptionName, MENU_LINE) then
@@ -765,7 +802,7 @@ begin
   end
   else
   begin
-    Rect.SetSize(Round(Font.GetTextWidth(ACaptionName)) + 10, DEF_ITEM_HEIGHT);
+    Rect.SetSize(Round(Font.GetTextWidth(ACaptionName)) + 10, Round(Font.GetTextHeight(ACaptionName)) + 10);
     VertexList.MakeSquare(0, 0, 0, 0, Color, GUIPalette.GetCellRect(pal_3));
 
     Area.Show    := True;
@@ -775,6 +812,8 @@ begin
   end;
 
   SetCaption(ACaptionName);
+  FBufColor    := Font.Color;
+  FColorDisable:= clGray;
 end;
 
 destructor TGUIMainMenuItem.Destroy;
@@ -831,6 +870,8 @@ end;
 procedure TGUIMainMenuItem.OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton);
 begin
   inherited;
+  if not Enable then
+    Exit;
 
   if (pX >= FRect.X) and
      (pY >= FRect.Y) and
@@ -874,6 +915,8 @@ end;
 
 procedure TGUIMainMenuItem.OnMouseUp(pX, pY: Integer; Button: TGUIMouseButton);
 begin
+  if not Enable then
+    Exit;
 
   if (pX >= FRect.X) and
      (pY >= FRect.Y) and
@@ -935,13 +978,13 @@ begin
   Font.Text(Rect.X + FTextOffset.X, Rect.Y + FYPos, FCaption, 0, True);
 end;
 
-procedure TGUIMainMenuItem.SetCaption(value: string);
+procedure TGUIMainMenuItem.SetCaption(AValue: string);
 begin
-  FCaption:= value;
+  FCaption:= AValue;
   CalcTextYPos;
 end;
 
-procedure TGUIMainMenuItem.SetChild(value: TGUIMainMenuGroup);
+procedure TGUIMainMenuItem.SetChild(AValue: TGUIMainMenuGroup);
 
 procedure SetParent(AGroup: TGUIMainMenuGroup; AParent: TGUIObject);
 var i: integer;
@@ -958,7 +1001,8 @@ end;
 
 begin
   FType := mmtItem;
-  FChild:= value;
+  FChild:= AValue;
+  FChild.Font.CopyFrom(Self.Font);
 
   if not Assigned(FChild) then
     Exit;
@@ -966,6 +1010,34 @@ begin
   FType         := mmtRoot;
   FChild.Show   := False;
   SetParent(FChild, Self.Parent);
+end;
+
+procedure TGUIMainMenuItem.SetDisableColor(value: TColor);
+begin
+  FColorDisable:= value;
+  if not Enable then
+    Font.Color:= value;
+end;
+
+procedure TGUIMainMenuItem.SetEnable(pEnable: Boolean);
+begin
+  if Enable = pEnable then
+    Exit;
+
+  inherited;
+
+  if not Assigned(Font) then
+    Exit;
+
+  if not pEnable then
+  begin
+    FBufColor := Font.Color;
+    Font.Color:= FColorDisable
+  end
+  else
+  begin
+    Font.Color:= FBufColor;
+  end;
 end;
 
 procedure TGUIMainMenuItem.SetFontEvent;

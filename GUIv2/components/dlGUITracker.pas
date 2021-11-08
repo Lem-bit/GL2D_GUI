@@ -18,11 +18,11 @@ uses SysUtils, Classes, Graphics, dlGUITypes, dlGUIObject, dlGUIPaletteHelper, d
 
 type
   TGUITracker = class(TGUIObject)
-  private
+  strict private
     const BTN_UPL = 1; //Кнопка 1
           BTN_DNR = 2; //Кнопка 2
           TRK_OBJ = 3; //Трекер
-  private
+  strict private
     FSize        : Integer; //Размер квадрата (кнопки)
     FButton      : array[BTN_UPL..BTN_DNR] of TGUIButton; //1 - up, 2 - down
     FTrack       : TGUIImage;
@@ -34,7 +34,7 @@ type
 
     FMaxValue    : Integer; //Макс кол-во элементов
     FCurrValue   : Integer; //Текущее положение на каком элементе
-  private
+  strict private
     //Позиция кнопки по X, pBtnIndex - индекс кнопки BTN_UP, BTN_DN...
     function GetObjPosX(pObjIndex: integer): Integer;
     function GetObjPosY(pObjIndex: integer): Integer;
@@ -43,7 +43,7 @@ type
     function GetMaxHeight: Integer;
     //Макс ширина
     function GetMaxWidth: Integer;
-  private
+  strict private
     procedure SetShowTrack(pValue: Boolean);
     procedure SetMaxValue(pValue: Integer);
 
@@ -89,10 +89,10 @@ type
 
   //Класс - Интерфейс с трекерами для объектов (ListBox, Memo, Table...)
   TGUITrackerIntf = class(TGUIObject)
-    //Трекер
-    const V_TR = 1;
-          H_TR = 2;
-          W_TR = 16;
+    strict private
+      const V_TR = 1;
+            H_TR = 2;
+            W_TR = 16;
     protected
       FTracker: array[1..2] of TGUITracker;
     private
@@ -339,7 +339,7 @@ begin
   //Создаем кнопки
   for i := Low(FButton) to High(FButton) do
   begin
-    FButton[i]:= TGUIButton.Create('', '', 0, 0, pTextureLink);
+    FButton[i]:= TGUIButton.Create('', pTextureLink);
     FButton[i].Flat:= True;
     FButton[i].SetRect(GetObjPosX(i), GetObjPosY(i), FSize, FSize);
     FButton[i].VertexList.SetVertexTextureMap(0, GUIPalette.GetCellRect(11 + i + imgOff));
@@ -356,7 +356,8 @@ begin
   else
     imgOff:= 1;
 
-  FTrack:= TGUIImage.Create('', GetObjPosX(TRK_OBJ), GetObjPosY(TRK_OBJ), FSize, FSize, pTextureLink);
+  FTrack:= TGUIImage.Create('', pTextureLink);
+  FTrack.SetRect(GetObjPosX(TRK_OBJ), GetObjPosY(TRK_OBJ), FSize, FSize);
   FTrack.VertexList.SetVertexTextureMap(0, GUIPalette.GetCellRect(25 + imgOff));
   FTrack.Area.Show:= False;
 

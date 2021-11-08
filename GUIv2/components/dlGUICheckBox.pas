@@ -2,7 +2,7 @@
 
 interface
 
- uses dlOpenGL, dlGUITypes, dlGUIFont, Graphics, dlGUIObject, dlGUIPaletteHelper;
+ uses dlOpenGL, dlGUITypes, dlGUIFont, Graphics, dlGUIObject, dlGUIPaletteHelper, dlGUIXMLSerial;
 
 {
   ====================================================
@@ -18,34 +18,20 @@ interface
 
  type
   TGUICheckBox = class(TGUIObject)
-     private
+     strict private
        FChecked: Boolean;
        FText   : String;
      protected
        procedure SetAreaResize; override;
        procedure SetFontEvent; override; //Событие при создании шрифта
+       procedure SetText(AValue: String);
      public
-       constructor Create(pName, pText: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
+       constructor Create(pName: String = ''; pTextureLink: TTextureLink = nil);
        procedure RenderText; override;
        procedure OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton); override;
-     published
-       property ObjectType;
-       property Name;
-       property X;
-       property Y;
-       property Width;
-       property Height;
-       property Color;
-       property Font;
-       property Hide;
-       property TextureName;
-       //классы
-       property Parent;
-       property PopupMenuName;
-       property Hint;
-       property Blend;
-       property Checked: Boolean read FChecked write FChecked;
-       property Text: String read FText;
+     public
+       [TXMLSerial] property Checked: Boolean read FChecked write FChecked;
+       [TXMLSerial] property Text: String read FText write SetText;
    end;
 
 implementation
@@ -56,12 +42,12 @@ implementation
 
 { TGUICheckBox }
 
-constructor TGUICheckBox.Create(pName, pText: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
+constructor TGUICheckBox.Create(pName: String = ''; pTextureLink: TTextureLink = nil);
 begin
   inherited Create(pName, gtcCheckBox);
-  SetRect(pX, pY, 140, CHECKBOX_SIZE);
+  SetRect(0, 0, 100, CHECKBOX_SIZE);
 
-  FText    := pText;
+  FText    := '';
   Area.Show:= True;
 
   FTextOffset.SetRect(CHECKBOX_SIZE + 4, 0, 0, 0);
@@ -84,6 +70,12 @@ begin
   inherited;
 
   FTextOffset.Y:= -Trunc((Font.Height - CHECKBOX_SIZE) / 2) - 1;
+  Width:= Round(Font.GetTextWidth(FText)) + CHECKBOX_SIZE + 4;
+end;
+
+procedure TGUICheckBox.SetText(AValue: String);
+begin
+  FText:= AValue;
 end;
 
 procedure TGUICheckBox.OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton);

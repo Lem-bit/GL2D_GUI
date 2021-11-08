@@ -2,7 +2,7 @@
 
 interface
 
-uses SysUtils, dlGUITypes, dlGUIFont, Graphics, dlGUIObject, dlGUIPaletteHelper;
+uses SysUtils, dlGUITypes, dlGUIFont, Graphics, dlGUIObject, dlGUIPaletteHelper, dlGUIXmlSerial;
 
 {
   ====================================================
@@ -55,47 +55,32 @@ type
     procedure SetColor(pColor: TColor); override;
     procedure SetAreaResize; override;
   public
-    OnTrackMin : TGUIProc;
-    OnTrackMax : TGUIProc;
-    OnTrackMove: TGUIProc;
+    [TXMLSerial] OnTrackMin : TGUIProc;
+    [TXMLSerial] OnTrackMax : TGUIProc;
+    [TXMLSerial] OnTrackMove: TGUIProc;
 
-    constructor Create(pName: String; pX, pY: Integer; pOrient: TGUIOrientation = goHorizontal; pTextureLink: TTextureLink = nil);
+    constructor Create(pName: String = ''; pTextureLink: TTextureLink = nil; pOrient: TGUIOrientation = goHorizontal);
     procedure RenderText; override;
 
     procedure OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton); override;
     procedure OnMouseUp(pX, pY: Integer; Button: TGUIMouseButton); override;
     procedure OnMouseMove(pX, pY: Integer); override;
 
-  published
-    property ObjectType;
-    property Name;
-    property X;
-    property Y;
-    property Width;
-    property Height;
-    property Font;
-    property Hide;
-    property TextureName;
-    //классы
-    property Parent;
-    property PopupMenuName;
-    property Hint;
-    property Blend;
-
-    property FillColor : TColor          read FFillColor  write SetFillColor;
-    property TrackColor: TColor          read FTrackColor write SetTrackColor;
-    property TrackWidth: Integer         read FTrackWidth write SetTrackWidth;
-    property Value     : Integer         read FValue      write SetValue;
-    property MaxValue  : Integer         read FMaxValue   write SetMaxValue;
-    property Color     : TColor          read GetColor    write SetColor;
-    property Orient    : TGUIOrientation read FOrient     write SetOrient;
+  public
+    [TXMLSerial] property FillColor : TColor          read FFillColor  write SetFillColor;
+    [TXMLSerial] property TrackColor: TColor          read FTrackColor write SetTrackColor;
+    [TXMLSerial] property TrackWidth: Integer         read FTrackWidth write SetTrackWidth;
+    [TXMLSerial] property Value     : Integer         read FValue      write SetValue;
+    [TXMLSerial] property MaxValue  : Integer         read FMaxValue   write SetMaxValue;
+    [TXMLSerial] property Color     : TColor          read GetColor    write SetColor;
+    [TXMLSerial] property Orient    : TGUIOrientation read FOrient     write SetOrient;
   end;
 
 implementation
 
 { TGUIButton }
 
-constructor TGUITrackBar.Create(pName: String; pX, pY: Integer; pOrient: TGUIOrientation = goHorizontal; pTextureLink: TTextureLink = nil);
+constructor TGUITrackBar.Create(pName: String = ''; pTextureLink: TTextureLink = nil; pOrient: TGUIOrientation = goHorizontal);
 begin
   inherited Create(pName, gtcTrackBar);
 
@@ -117,7 +102,7 @@ begin
 
   case FOrient of
     goHorizontal: begin
-      Rect.SetRect(pX, pY, 150, 15);
+      Rect.SetRect(0, 0, 150, 15);
       //Рамка
       VertexList.MakeSquare(0, 0, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_2));
       //Область трекера
@@ -129,7 +114,7 @@ begin
     end;
 
     goVertical: begin
-      Rect.SetRect(pX, pY, 15, 150);
+      Rect.SetRect(0, 0, 15, 150);
       //Рамка
       VertexList.MakeSquare(0, 0, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_2));
       //Область трекера

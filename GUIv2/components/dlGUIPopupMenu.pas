@@ -2,7 +2,7 @@
 
 interface
 
-uses Classes, dlOpenGL, SysUtils, Graphics, dlGUIFont, dlGUITypes, dlGUITypesRTTI, dlGUIObject, dlGUIPaletteHelper;
+uses Classes, dlOpenGL, SysUtils, Graphics, dlGUIFont, dlGUITypes, dlGUIObject, dlGUIPaletteHelper, dlGUIXmlSerial;
 
 {
   ====================================================
@@ -18,7 +18,7 @@ uses Classes, dlOpenGL, SysUtils, Graphics, dlGUIFont, dlGUITypes, dlGUITypesRTT
 
 type
   TGUIMenuItem = class(TGUIObject)
-    private
+    strict private
       FMenuName       : String;  //Название меню
       FDisable        : Boolean; //Меню отключенное
       FMenuLine       : Boolean; //Для элемента --
@@ -36,6 +36,10 @@ type
       function FocusDisable: Boolean;
       //Установить фоновый текст у меню
       procedure SetBackgroundColor(pColor: TColor);
+    private
+      property FontCustomColor: TColor read FFontCustomColor write FFontCustomColor;
+      property MenuLine: Boolean       read FMenuLine        write FMenuLine;
+      property MenuCaption: Boolean    read FMenuCaption     write FMenuCaption;
     published
       procedure SetResize; override;
     public
@@ -43,18 +47,19 @@ type
       destructor Destroy; override;
       procedure RenderText; override;
       procedure SetColorGradient(pVertexA, pVertexB, pVertexC, pVertexD: TColor);
-    published
-      property IsCaption      : Boolean          read FMenuCaption     write FMenuCaption;
-      property Disable        : Boolean          read FDisable         write FDisable;
-      property MenuName       : String           read GetMenuName      write FMenuName;
-      property BackgroundColor: TColor           read FBackgroundColor write SetBackgroundColor;
+    public
+      [TXMLSerial] property IsCaption      : Boolean read FMenuCaption     write FMenuCaption;
+      [TXMLSerial] property Disable        : Boolean read FDisable         write FDisable;
+      [TXMLSerial] property MenuName       : String  read GetMenuName      write FMenuName;
+      [TXMLSerial] property BackgroundColor: TColor  read FBackgroundColor write SetBackgroundColor;
   end;
 
   TGUIPopupMenu = class(TGUIObject)
-    private
-      FMenu      : TList;
-      FSelected  : Integer; //Выбранный элемент
-    private
+    strict private
+      FSelected: Integer; //Выбранный элемент
+    strict private
+      [TXMLSerial] FMenu: TList;
+    strict private
       //Подготовить список меню
       function IsExists(pIndex: integer): Boolean;
       procedure PrepareMenuItems;
@@ -64,7 +69,7 @@ type
       procedure SetFontEvent; override;
     public
       //Создать главное меню Popup
-      constructor Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
+      constructor Create(pName: String = ''; pTextureLink: TTextureLink = nil);
       destructor Destroy; override;
 
       //Добавить элемент меню
@@ -77,11 +82,8 @@ type
 
       procedure SetTextureLink(pTextureLink: TTextureLink); override;
     public
-      OnPopup: TGUIProc;
-
-     // function RTTIGetPublishedListItem: String;
-      function RTTIGetPublishedList(pIgnoreList: TStringList = nil): String; override;
-
+      [TXMLSerial] OnPopup: TGUIProc;
+    public
       procedure OnMouseMove(pX, pY: Integer); override;
       procedure OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton); override;
       procedure OnMouseUp(pX, pY: Integer; Button: TGUIMouseButton); override;
@@ -90,15 +92,6 @@ type
       procedure Render; override;
     public
       property Item[index: integer]: TGUIMenuItem read GetItem;
-    published
-       property ObjectType;
-       property Name;
-       property Color;
-       property Font;
-       property TextureName;
-       //классы
-       property Blend;
-
   end;
 
 implementation
@@ -114,7 +107,7 @@ begin
   Result:= FMenu.Count;
 end;
 
-constructor TGUIPopupMenu.Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
+constructor TGUIPopupMenu.Create(pName: String = ''; pTextureLink: TTextureLink = nil);
 begin
   inherited Create(pName, gtcPopupMenu);
   FMenu    := TList.Create;
@@ -130,7 +123,7 @@ begin
   ID:= -1;
 
   for FID := 0 to FMenu.Count - 1 do
-    if SameText(pMenuName, Item[FID].FMenuName) then
+    if SameText(pMenuName, Item[FID].MenuName) then
     begin
       ID:= FID;
       Break;
@@ -179,11 +172,11 @@ procedure TGUIPopupMenu.Add(pMenuName: String; pDisable: Boolean = False; pProc:
 var Item: TGUIMenuItem;
 begin
   Item:= TGUIMenuItem.Create(Self.Name + '.Menu', pMenuName, 0, 0);
-  Item.FDisable        := pDisable;
-  Item.FFontCustomColor:= pColor;
-  Item.Color           := Color;
-  Item.Parent          := Self;
-  Item.OnClick         := pProc;
+  Item.Disable        := pDisable;
+  Item.FontCustomColor:= pColor;
+  Item.Color          := Color;
+  Item.Parent         := Self;
+  Item.OnClick        := pProc;
   Item.SetTextureLink(Self.GetTextureLink);
   Item.Font.SetTextureLink(Self.Font.GetTextureLink);
   FMenu.Add(Item);
@@ -258,8 +251,8 @@ begin
 
     FSelected  := FID;
 
-    if Item.FMenuLine    then Continue;
-    if Item.FMenuCaption then Continue;
+    if Item.MenuLine    then Continue;
+    if Item.MenuCaption then Continue;
 
     Item.DrawMenuSelected(True);
   end;
@@ -301,7 +294,7 @@ begin
   for FID := 0 to FMenu.Count - 1 do
     with TGUIMenuItem(FMenu.Items[FID]) do
     begin
-      ItemW:= Trunc(Font.GetTextWidth(FMenuName));
+      ItemW:= Trunc(Font.GetTextWidth(MenuName));
        if ItemW > MaxWidth then MaxWidth:= ItemW;
     end;
 
@@ -325,7 +318,7 @@ begin
     if (Item.Blend.Alpha <> 0.0) then
       Item.Blend.Alpha:= Self.Blend.Alpha;
 
-    if Item.FMenuLine then
+    if Item.MenuLine then
       Item.Height:= Item.Height div 2;
 
     Item.VertexList.SetGroupHide(GROUP_MENU    , False);
@@ -385,38 +378,6 @@ begin
   for FID := 0 to FMenu.Count - 1 do
     with TGUIMenuItem(FMenu.Items[FID]) do
       RenderText;
-end;
-
-function TGUIPopupMenu.RTTIGetPublishedList(pIgnoreList: TStringList): String;
-var FID: Integer;
-    List: TStringList;
-    Item: TGUIMenuItem;
-begin
-  Result:= '';
-  List:= TStringList.Create;
-
-  try
-    //Узнаем все свойства родителя
-    RTTIGetObjectPropList(Self, List);
-    List.Add(objRTTI.RawFormat(rawItemList, Self));
-
-    //Узнаем все свойства элементов
-    for FID := 0 to FMenu.Count - 1 do
-    begin
-      Item:= TGUIMenuItem(FMenu.Items[FID]);
-
-      List.Add(objRTTI.RawFormat(rawItem, Item));
-      List.Add(Item.RTTIGetPublishedList());
-      List.Add(Item.RTTIGetProcList);
-      List.Add(objRTTI.RawFormat(rawEndItem, Item));
-    end;
-
-    List.Add(objRTTI.RawFormat(rawEndItemList, Self));
-    Result:= List.Text;
-    List.SaveToFile('.\published\' + Self.ClassName + '_' + TGUITypeDefNames[Self.ObjectType].Name + '.txt');
-  finally
-    List.Free;
-  end;
 end;
 
 { TGUIMenuItem }

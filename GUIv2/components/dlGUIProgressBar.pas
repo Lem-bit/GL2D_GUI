@@ -2,7 +2,7 @@
 
 interface
 
-uses SysUtils, Graphics, dlGUITypes, dlGUIObject, dlGUIPaletteHelper;
+uses SysUtils, Graphics, dlGUITypes, dlGUIObject, dlGUIPaletteHelper, dlGUIXmlSerial;
 
 {
   ====================================================
@@ -18,7 +18,7 @@ uses SysUtils, Graphics, dlGUITypes, dlGUIObject, dlGUIPaletteHelper;
 
 type
   TGUIProgressBar = class(TGUIObject)
-    private
+    strict private
      type
        TGUIShowTextProp = (
                           stNone, //Никогда не отображать
@@ -26,14 +26,14 @@ type
                           stOnlyMouse //Отображать только когда наведена мышь
                         );
 
-    private
+    strict private
       FMax         : Integer;
       FValue       : Integer;
       FStrValue    : String;
 
       FBorderWidth : Integer;
       FShowText    : TGUIShowTextProp;
-    private
+    strict private
       procedure RecalcTextPos;
 
       procedure SetValue(pValue: Integer);
@@ -50,32 +50,17 @@ type
       procedure SetResize; override; //Применить к вершинам масштабирование Width, Height
       procedure SetAreaResize; override;
     public
-      constructor Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink = nil);
+      constructor Create(pName: String = ''; pTextureLink: TTextureLink = nil);
       procedure SetColorGradient(pAColor, pBColor, pCColor, pDColor: TColor);
 
       procedure RenderText; override;
-    published
-      property ObjectType;
-      property Name;
-      property X;
-      property Y;
-      property Width;
-      property Height;
-      property Font;
-      property Hide;
-      property TextureName;
-      //классы
-      property Parent;
-      property PopupMenuName;
-      property Hint;
-      property Blend;
-
-      property ShowText   : TGUIShowTextProp read FShowText      write FShowText       default stNone;
-      property BorderColor: TColor           read GetBorderColor write SetBorderColor;
-      property BorderWidth: Integer          read FBorderWidth   write SetBorderWidth;
-      property Max        : Integer          read FMax           write FMax;
-      property Value      : Integer          read FValue         write SetValue;
-      property Color      : TColor           read GetColor       write SetColor;
+    public
+      [TXMLSerial] property ShowText   : TGUIShowTextProp read FShowText      write FShowText       default stNone;
+      [TXMLSerial] property BorderColor: TColor           read GetBorderColor write SetBorderColor;
+      [TXMLSerial] property BorderWidth: Integer          read FBorderWidth   write SetBorderWidth;
+      [TXMLSerial] property Max        : Integer          read FMax           write FMax;
+      [TXMLSerial] property Value      : Integer          read FValue         write SetValue;
+      [TXMLSerial] property Color      : TColor           read GetColor       write SetColor;
   end;
 
 implementation
@@ -85,10 +70,10 @@ const GROUP_BORDER = 0;
 
 { TGUIProgressBar }
 
-constructor TGUIProgressBar.Create(pName: String; pX, pY: Integer; pTextureLink: TTextureLink);
+constructor TGUIProgressBar.Create(pName: String = ''; pTextureLink: TTextureLink = nil);
 begin
   inherited Create(pName, gtcProgressBar);
-  SetRect(pX, pY, 200, 25);
+  SetRect(0, 0, 200, 25);
 
   FBorderWidth:= 1;
   FMax        := 100;
@@ -99,7 +84,7 @@ begin
   SetTextureLink(pTextureLink);
   RecalcTextPos;
 
-  VertexList.MakeSquare(0, 0, Width, Height, Color, GUIPalette.GetCellRect(pal_6), GROUP_BORDER);
+  VertexList.MakeSquare(Rect.X, Rect.Y, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_6), GROUP_BORDER);
   VertexList.MakeSquare(FBorderWidth, FBorderWidth, GetRectWidthValue, Height - (FBorderWidth * 2), Color, GUIPalette.GetCellRect(pal_3), GROUP_VALUE);
 end;
 
