@@ -739,7 +739,7 @@ begin
     //Перемещаем на последнее место
     if Obj.ShowOnTop then
       FComponent.Move(FID, FComponent.Count - 1);
-    Break;
+    //Break;
   end;
 
   if (not FHitCaption) and Assigned(FActivePopup) then
