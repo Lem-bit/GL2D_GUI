@@ -42,7 +42,7 @@ begin
 
   FProportion:= False;
   Area.Show  := True;
-  VertexList.MakeSquare(Rect.X, Rect.Y, Rect.Width, Rect.Height, FColor.GetColor, pTextureLink);
+  VertexList.MakeSquare(Rect, Color, pTextureLink);
 
   SetImageLink(pTextureLink);
 end;
@@ -83,7 +83,7 @@ end;
 
 procedure TGUIImage.SetResize;
 begin
-  VertexList.SetVertexPosSquare(0, 0, 0, Rect.Width, Rect.Height);
+  VertexList.SetSizeSquare(0, Rect);
 end;
 
 

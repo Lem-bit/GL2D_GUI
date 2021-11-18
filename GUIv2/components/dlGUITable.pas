@@ -248,7 +248,7 @@ begin
   HTracker.Hide:= False;
 
   //Фон
-  VertexList.MakeSquare(Rect.X, Rect.Y, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_Frame));
+  VertexList.MakeSquare(Rect, Color, GUIPalette.GetCellRect(pal_Frame));
 end;
 
 destructor TGUITable.Destroy;
@@ -327,7 +327,7 @@ begin
       Break;
 
     //Размер заголовка
-    Headers.Item[i].Rect.SetPos(
+    Headers.Item[i].SetPos(
        Rect.X + currWidth,
        Rect.Y
     );
@@ -348,7 +348,7 @@ begin
         Break;
 
       //Размер элемента
-      Item.Col[i].Rect.SetPos(
+      Item.Col[i].SetPos(
          Rect.X + currWidth,
          Rect.Y + currHeight
       );
@@ -402,7 +402,7 @@ end;
 procedure TGUITable.SetResize;
 begin
   inherited;
-  VertexList.SetVertexPosSquare(0, 0, 0, Rect.Width, Rect.Height);
+  VertexList.SetSizeSquare(0, Rect);
   SetAction([goaUpdateSize]);
 end;
 
@@ -548,8 +548,8 @@ end;
 
 procedure TGUITableCell.SetResize;
 begin
-  VertexList.SetVertexPosSquare(0, 0, 0, Rect.Width, Rect.Height);
-  VertexList.SetVertexPosSquare(4, 1, 1, Rect.Width - 2, Rect.Height - 2);
+  VertexList.SetSizeSquare(0, Rect);
+  VertexList.SetSizeSquare(4, Rect, 1);
 end;
 
 { TGUITableCellList }
@@ -759,7 +759,7 @@ begin
   if not Assigned(Header) then
     Exit;
 
-  Item.SetRect(0, 0, Header.Width, FHeight);
+  Item.SetSize(Header.Width, FHeight);
 end;
 
 procedure TGUITableItem.Add(const AText: array of String);
@@ -855,7 +855,7 @@ procedure TGUITableSelected.Render(const ARect: TGUIObjectRect);
 begin
   Blend.Bind;
   Color.glColor3fx;
-  ARect.Render(-1, GL_QUADS);
+  ARect.Render(1, GL_QUADS, $00333333);
 end;
 
 { TGUITableCol }
@@ -867,8 +867,8 @@ begin
   //Устанавливать позицию X, Y не нужно т.к. она расчитывается при рендере
   FTextOffset.X:= 5;
 
-  VertexList.MakeSquare(0, 0, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_7));
-  VertexList.MakeSquare(1, 1, Rect.Width - 2, Rect.Height - 2, Color, GUIPalette.GetCellRect(pal_Frame));
+  VertexList.MakeSquare(Rect, Color, GUIPalette.GetCellRect(pal_7));
+  VertexList.MakeSquareOffset(0, 1, Color, GUIPalette.GetCellRect(pal_Frame));
 end;
 
 { TGUITableHeader }
@@ -880,8 +880,8 @@ begin
   //Устанавливать позицию X, Y не нужно т.к. она расчитывается при рендере
   FTextOffset.X:= 5;
 
-  VertexList.MakeSquare(0, 0, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_7));
-  VertexList.MakeSquare(1, 1, Rect.Width - 2, Rect.Height - 2, Color, GUIPalette.GetCellRect(pal_3));
+  VertexList.MakeSquare(Rect, Color, GUIPalette.GetCellRect(pal_7));
+  VertexList.MakeSquareOffset(0, 1, Color, GUIPalette.GetCellRect(pal_3));
 end;
 
 { TGUITableProperties }

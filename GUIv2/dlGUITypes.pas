@@ -193,11 +193,11 @@ type
     constructor Create(pR, pG, pB, pA: TFloat); overload;
     destructor Destroy; override;
 
-    //OpenGL команды
     class procedure glColor3fx(pColor: Integer); overload;
     class function ColorToGLColor3Rec(pColor: Integer): TGLColor3Rec;
     class function ColorToGLColor4Rec(pColor: Integer): TGLColor4Rec;
 
+    //OpenGL команды
     procedure glColor3fx; overload; //Установить glColor3f(R, G, B);
     procedure glColor4fx; //Установить glColor3f(R, G, B, A);
     //
@@ -304,14 +304,16 @@ type
        [TXMLSerial] Height: Integer; //Высота
      public
        procedure SetPos(pX, pY: Integer);
-       procedure SetRect(pRect: TGUIObjectRect); overload;
+       procedure SetRect(pRect: TGUIObjectRect; pOffset: Integer = 0); overload;
        procedure SetRect(pX, pY, pW, pH: Integer); overload;
        procedure SetSize(pWidth, pHeight: Integer);
+
+       procedure SetAnchWidth (pWidth: Integer);
+       procedure SetAnchHeight(pHeight: Integer);
      public
        //Нарисовать квадрат по размерам
-       procedure Render(pOffset: Integer = 0; pMode: TUInt = GL_LINE_LOOP);
+       procedure Render(pOffset: TFloat = 0.0; pMode: TUInt = GL_LINE_LOOP; pColor: TColor = clWhite);
        function ToString: String; overload;
-
    end;
 
 //===========================================
@@ -613,8 +615,7 @@ begin
       FColor.A := 1.0;
   end;
 
-  FColor.glColor4fx;
-  Rect.Render(FOffset, FDrawMode);
+  Rect.Render(FOffset, FDrawMode, FColor.GetColor);
 
   glPointSize(1);
   glLineWidth(1);
@@ -821,6 +822,7 @@ begin
 end;
 
 procedure TGUICursor.Render;
+var Corr: TFloat;
 begin
   if GetCurrentTime - FCursorTime > FWaitTime then
   begin
@@ -833,11 +835,12 @@ begin
 
   glPushMatrix;
     glBegin(GL_QUADS);
+      Corr:= -0.5;
       FColor.glColor4fx;
-      glVertex2f(FRect.X + FCursorRenderPos              , FRect.Y);
-      glVertex2f(FRect.X + FCursorRenderPos + FRect.Width, FRect.Y);
-      glVertex2f(FRect.X + FCursorRenderPos + FRect.Width, FRect.Y + FRect.Height);
-      glVertex2f(FRect.X + FCursorRenderPos              , FRect.Y + FRect.Height);
+      glVertex2f(FRect.X + FCursorRenderPos + Corr              , FRect.Y + Corr);
+      glVertex2f(FRect.X + FCursorRenderPos + Corr + FRect.Width, FRect.Y + Corr);
+      glVertex2f(FRect.X + FCursorRenderPos + Corr + FRect.Width, FRect.Y + Corr + FRect.Height);
+      glVertex2f(FRect.X + FCursorRenderPos + Corr              , FRect.Y + Corr + FRect.Height);
   glEnd;
 
   glPopMatrix;
@@ -851,14 +854,32 @@ end;
 
 { TGUIObjectRect }
 
-procedure TGUIObjectRect.Render(pOffset: Integer = 0; pMode: TUInt = GL_LINE_LOOP);
+procedure TGUIObjectRect.Render(pOffset: TFloat = 0.0; pMode: TUInt = GL_LINE_LOOP; pColor: TColor = clWhite);
+var ACorr: TFloat;
+    Buf  : TGLColor4Rec;
 begin
+  Buf:= TGLColor.ColorToGLColor4Rec(pColor);
+  glColor4f(Buf.R, Buf.G, Buf.B, Buf.A);
+
+  {MakeSquare}
   glBegin(pMode);
-    glVertex2f(X - pOffset, Y - pOffset);
-    glVertex2f(X + Width + pOffset, Y - pOffset);
-    glVertex2f(X + Width + pOffset, Y + Height + pOffset);
-    glVertex2f(X - pOffset, Y + Height + pOffset);
+    //Корректировка - для OpenGL чтобы он считал ровно один пиксель а не 0.5
+    ACorr:= pOffset + 0.3;
+    glVertex2f(X + ACorr, Y + ACorr);
+    glVertex2f(X + Width - ACorr, Y + ACorr);
+    glVertex2f(X + Width - ACorr, Y + Height - ACorr);
+    glVertex2f(X + ACorr, Y + Height - ACorr);
   glEnd;
+end;
+
+procedure TGUIObjectRect.SetAnchHeight(pHeight: Integer);
+begin
+  Height:= pHeight;
+end;
+
+procedure TGUIObjectRect.SetAnchWidth(pWidth: Integer);
+begin
+  Width:= pWidth;
 end;
 
 procedure TGUIObjectRect.SetPos(pX, pY: Integer);
@@ -867,10 +888,10 @@ begin
   Y:= pY;
 end;
 
-procedure TGUIObjectRect.SetRect(pRect: TGUIObjectRect);
+procedure TGUIObjectRect.SetRect(pRect: TGUIObjectRect; pOffset: Integer = 0);
 begin
-  SetPos(pRect.X, pRect.Y);
-  SetSize(pRect.Width, pRect.Height);
+  SetPos (pRect.X + pOffset          , pRect.Y + pOffset     );
+  SetSize(pRect.Width - (pOffset * 2), pRect.Height - (pOffset * 2));
 end;
 
 procedure TGUIObjectRect.SetRect(pX, pY, pW, pH: Integer);

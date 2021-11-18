@@ -54,7 +54,7 @@ begin
   FText    := '';
 
   SetTextureLink(pTextureLink);
-  VertexList.MakeSquare(Rect.X, Rect.Y, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_Window));
+  VertexList.MakeSquare(Rect, Color, GUIPalette.GetCellRect(pal_Window));
 end;
 
 procedure TGUILabel.Render;
@@ -87,7 +87,7 @@ end;
 
 procedure TGUILabel.SetResize;
 begin
-  VertexList.SetVertexPosSquare(0, 0, 0, Rect.Width, Rect.Height);
+  VertexList.SetSizeSquare(0, Rect);
 end;
 
 procedure TGUILabel.SetText(pText: String);

@@ -60,12 +60,21 @@ type
       procedure SetVertexTextureOne(pIndexOne: Integer = 0; pIndexStart: Integer = 0);
       //Установить видимость (показать/скрыть) только тем которые в списке (-1 - всем)
       procedure SetVertexShowInList(pShow: Boolean; pVertexIndexList: array of Integer);
+
+      {******* 2.2 ***********}
+      procedure SetSizeSquare(AIndex: Integer; ARect: TGUIObjectRect; AOffset: Integer = 0);
+      procedure SetRectSquare(AIndex: Integer; ARect: TGUIObjectRect; AOffset: Integer = 0);
+      procedure SetCalcSquare(AIndex: Integer; AObjRect: TGUIObjectRect; ARect: TGUIObjectRect; AOffset: Integer = 0);
+      procedure MakeSquare(ARect: TGUIObjectRect; AColor: TColor; ATextureLinkArr: TTextureLinkSquadArr; AGroup: Byte = 0; AHide: Boolean = false); overload;
+      procedure MakeSquare(ARect: TGUIObjectRect; AColor: TColor; ATextureLink: TTextureLink; AGroup: Byte = 0; AHide: Boolean = false); overload;
+      procedure MakeSquare(ARect: TGUIObjectRect; pVColor1, pVColor2, pVColor3, pVColor4: TColor; pTextureLinkArr: TTextureLinkSquadArr; pGroup: Byte = 0; pHide: Boolean = false); overload;
+
       //Уничтожить класс
       destructor Destroy; override;
     public
       property Vertex[index: Integer]: TVertexClass read GetVertex;
       property Count: Integer read GetCount;
-
+      procedure Clear;
   end;
 
 implementation
@@ -125,15 +134,53 @@ begin
 end;
 
 procedure TGUIVertexList.SetGroupHide(pGroup: Byte; pHide: Boolean);
-var FID: Integer;
+var i: Integer;
+    Vertex: TVertexClass;
 begin
   if not Assigned(FVertexList) then
     Exit;
 
-  for FID := 0 to FVertexList.Count - 1 do
-   with TVertexClass(FVertexList.Items[FID]) do
-     if Group = pGroup then
-        Hide:= pHide;
+  for i := 0 to FVertexList.Count - 1 do
+  begin
+    Vertex:= TVertexClass(FVertexList.Items[i]);
+    if Vertex.Group <> pGroup then
+      Continue;
+
+    Vertex.Hide:= pHide;
+  end;
+end;
+
+procedure TGUIVertexList.SetCalcSquare(AIndex: Integer; AObjRect, ARect: TGUIObjectRect; AOffset: Integer);
+var BufRect: TGUIObjectRect;
+begin
+  BufRect.X     := ARect.X - AObjRect.X;
+  BufRect.Y     := ARect.Y - AObjRect.Y;
+  BufRect.Width := ARect.Width;
+  BufRect.Height:= ARect.Height;
+  {MakeSquare}
+  SetVertexPos( AIndex    , BufRect.X + AOffset                , BufRect.Y + AOffset);
+  SetVertexPos( AIndex + 1, BufRect.X + BufRect.Width - AOffset, BufRect.Y + AOffset);
+  SetVertexPos( AIndex + 2, BufRect.X + BufRect.Width - AOffset, BufRect.Y + BufRect.Height - AOffset);
+  SetVertexPos( AIndex + 3, BufRect.X + AOffset                , BufRect.Y + BufRect.Height - AOffset);
+end;
+
+procedure TGUIVertexList.SetRectSquare(AIndex: Integer; ARect: TGUIObjectRect; AOffset: Integer = 0);
+begin
+  {MakeSquare}
+  SetVertexPos( AIndex    , ARect.X + AOffset              , ARect.Y + AOffset);
+  SetVertexPos( AIndex + 1, ARect.X + ARect.Width - AOffset, ARect.Y + AOffset);
+  SetVertexPos( AIndex + 2, ARect.X + ARect.Width - AOffset, ARect.Y + ARect.Height - AOffset);
+  SetVertexPos( AIndex + 3, ARect.X + AOffset              , ARect.Y + ARect.Height - AOffset);
+end;
+
+procedure TGUIVertexList.SetSizeSquare(AIndex: Integer; ARect: TGUIObjectRect; AOffset: Integer);
+begin
+  {MakeSquare}
+  //Не трогаем позицию т.к. это изменение размера
+  SetVertexPos( AIndex    , AOffset              , AOffset);
+  SetVertexPos( AIndex + 1, ARect.Width - AOffset, AOffset);
+  SetVertexPos( AIndex + 2, ARect.Width - AOffset, ARect.Height - AOffset);
+  SetVertexPos( AIndex + 3, AOffset              , ARect.Height - AOffset);
 end;
 
 procedure TGUIVertexList.SetVertexHide(pIndex: Integer; pHide: Boolean);
@@ -162,11 +209,17 @@ begin
   if not Assigned(FVertexList) then
     Exit;
 
+  if Length(pVertexIndexList) = 0 then
+  begin
+    for i := 0 to FVertexList.Count - 1 do
+      TVertexClass(FVertexList.Items[i]).Hide:= not pShow;
+  end
+  else
   for i := 0 to FVertexList.Count - 1 do
     if ExistInList(i) then
-      TVertexClass(FVertexList.Items[i]).Hide:= not pShow
+      TVertexClass(FVertexList.Items[i]).Hide:= pShow
     else
-      TVertexClass(FVertexList.Items[i]).Hide:= pShow;
+      TVertexClass(FVertexList.Items[i]).Hide:= not pShow;
 end;
 
 procedure TGUIVertexList.SetVertexPos(pIndex: Integer; pX, pY: TFloat);
@@ -241,6 +294,23 @@ begin
   MakeSquare(pX, pY, pWidth, pHeight, pVColor, pVColor, pVColor, pVColor, pTextureLinkArr, pGroup, pHide);
 end;
 
+procedure TGUIVertexList.MakeSquare(ARect: TGUIObjectRect; AColor: TColor; ATextureLink: TTextureLink; AGroup: Byte; AHide: Boolean);
+begin
+  MakeSquare(ARect.X, Arect.Y, ARect.Width, ARect.Height, AColor, ATextureLink, AGroup, AHide);
+end;
+
+procedure TGUIVertexList.MakeSquare(ARect: TGUIObjectRect; AColor: TColor; ATextureLinkArr: TTextureLinkSquadArr; AGroup: Byte; AHide: Boolean);
+begin
+  MakeSquare(ARect.X, ARect.Y, ARect.Width, ARect.Height, AColor, ATextureLinkArr, AGroup, AHide);
+end;
+
+procedure TGUIVertexList.MakeSquare(ARect: TGUIObjectRect; pVColor1, pVColor2,
+  pVColor3, pVColor4: TColor; pTextureLinkArr: TTextureLinkSquadArr;
+  pGroup: Byte; pHide: Boolean);
+begin
+  MakeSquare(ARect.X, ARect.Y, ARect.Width, ARect.Height, pVColor1, pVColor2, pVColor3, pVColor4, pTextureLinkArr, pGroup, pHide);
+end;
+
 procedure TGUIVertexList.MakeSquareOffset(pLink, pOffset: integer; pVColor1,
   pVColor2, pVColor3, pVColor4: TColor; pTextureLinkArr: TTextureLinkSquadArr;
   pGroup: Byte; pHide: Boolean);
@@ -249,21 +319,22 @@ begin
   if not IsExists(pLink + 3) then
     Exit;
 
+  {MakeSquare}
   X:= Vertex[pLink].Vertex.X;
   Y:= Vertex[pLink].Vertex.Y;
-  Make(X + pOffset, Y + pOffset, pVColor1, pTextureLinkArr.Index[0].U, pTextureLinkArr.Index[0].V, pGroup, pHide);
+{*}  Make(X + pOffset, Y + pOffset, pVColor1, pTextureLinkArr.Index[0].U, pTextureLinkArr.Index[0].V, pGroup, pHide);
 
   X:= Vertex[pLink + 1].Vertex.X;
   Y:= Vertex[pLink + 1].Vertex.Y;
-  Make(X - pOffset, Y + pOffset, pVColor2, pTextureLinkArr.Index[1].U, pTextureLinkArr.Index[1].V, pGroup, pHide);
+{*}  Make(X - pOffset, Y + pOffset, pVColor2, pTextureLinkArr.Index[1].U, pTextureLinkArr.Index[1].V, pGroup, pHide);
 
   X:= Vertex[pLink + 2].Vertex.X;
   Y:= Vertex[pLink + 2].Vertex.Y;
-  Make(X - pOffset, Y - pOffset, pVColor3, pTextureLinkArr.Index[2].U, pTextureLinkArr.Index[2].V, pGroup, pHide);
+{*}  Make(X - pOffset, Y - pOffset, pVColor3, pTextureLinkArr.Index[2].U, pTextureLinkArr.Index[2].V, pGroup, pHide);
 
   X:= Vertex[pLink + 3].Vertex.X;
   Y:= Vertex[pLink + 3].Vertex.Y;
-  Make(X + pOffset, Y - pOffset, pVColor4, pTextureLinkArr.Index[3].U, pTextureLinkArr.Index[3].V, pGroup, pHide).GapOccur:= True;
+{*}  Make(X + pOffset, Y - pOffset, pVColor4, pTextureLinkArr.Index[3].U, pTextureLinkArr.Index[3].V, pGroup, pHide).GapOccur:= True;
 end;
 
 procedure TGUIVertexList.MakeSquareOffset(pLink, pOffset: integer;
@@ -296,6 +367,15 @@ end;
 function TGUIVertexList.IsExists(pIndex: Integer): Boolean;
 begin
   Result:= (Assigned(FVertexList) and (pIndex > -1) and (pIndex < FVertexList.Count));
+end;
+
+procedure TGUIVertexList.Clear;
+var i: integer;
+begin
+  for i := 0 to FVertexList.Count - 1 do
+    TVertexClass(FVertexList.Items[i]).Free;
+
+  FVertexList.Clear;
 end;
 
 constructor TGUIVertexList.Create;

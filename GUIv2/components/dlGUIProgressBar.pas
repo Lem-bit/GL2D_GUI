@@ -29,6 +29,7 @@ type
     strict private
       FMax         : Integer;
       FValue       : Integer;
+      FFormat      : String; //Формат строки
       FStrValue    : String;
 
       FBorderWidth : Integer;
@@ -39,22 +40,25 @@ type
       procedure SetValue(pValue: Integer);
       procedure SetBorderWidth(pValue: Integer);
 
-      function GetRectWidthValue: Integer;
+      function GetRectWidthValue: TGUIObjectRect;
       function GetColor: TColor;
 
       procedure SetBorderColor(pColor: TColor);
       function GetBorderColor: TColor;
+
+      procedure SetFormat(pValue: String);
     protected
       procedure SetColor(pColor: TColor); override;
       procedure SetFontEvent; override;
       procedure SetResize; override; //Применить к вершинам масштабирование Width, Height
-      procedure SetAreaResize; override;
     public
       constructor Create(pName: String = ''; pTextureLink: TTextureLink = nil);
       procedure SetColorGradient(pAColor, pBColor, pCColor, pDColor: TColor);
 
+      procedure SetDefaultColor;
       procedure RenderText; override;
     public
+      [TXMLSerial] property StrFormat  : String           read FFormat        write SetFormat;
       [TXMLSerial] property ShowText   : TGUIShowTextProp read FShowText      write FShowText       default stNone;
       [TXMLSerial] property BorderColor: TColor           read GetBorderColor write SetBorderColor;
       [TXMLSerial] property BorderWidth: Integer          read FBorderWidth   write SetBorderWidth;
@@ -79,13 +83,15 @@ begin
   FMax        := 100;
   FValue      := 0;
   Area.Show   := True;
-  Color       := clWhite;
+{  Color       := clBlack;
+  BorderColor := clBlack;}
+  FFormat     := '%s %%';
 
   SetTextureLink(pTextureLink);
   RecalcTextPos;
 
-  VertexList.MakeSquare(Rect.X, Rect.Y, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_6), GROUP_BORDER);
-  VertexList.MakeSquare(FBorderWidth, FBorderWidth, GetRectWidthValue, Height - (FBorderWidth * 2), Color, GUIPalette.GetCellRect(pal_3), GROUP_VALUE);
+  VertexList.MakeSquare(Rect, Color, GUIPalette.GetCellRect(pal_6), GROUP_BORDER);
+  VertexList.MakeSquare(GetRectWidthValue, Color, GUIPalette.GetCellRect(pal_3), GROUP_VALUE);
 end;
 
 function TGUIProgressBar.GetBorderColor: TColor;
@@ -98,14 +104,17 @@ begin
   Result:= FColor.GetColor;
 end;
 
-function TGUIProgressBar.GetRectWidthValue: Integer;
+function TGUIProgressBar.GetRectWidthValue: TGUIObjectRect;
 begin
-  Result:= 0;
+  Result.SetRect(0, 0, 0, 0);
 
   if FValue = 0 then
     Exit;
 
-  Result:= Trunc( ((Rect.Width - (FBorderWidth * 2)) / FMax) * FValue );
+  Result.SetRect(Rect.X,
+                 Rect.Y,
+                 Round( ((Rect.Width - (FBorderWidth * 2) ) / FMax) * FValue ) + FBorderWidth * 2,
+                 Rect.Height);
 end;
 
 procedure TGUIProgressBar.SetFontEvent;
@@ -114,17 +123,27 @@ begin
   RecalcTextPos;
 end;
 
-procedure TGUIProgressBar.RecalcTextPos;
+procedure TGUIProgressBar.SetFormat(pValue: String);
 begin
-  FStrValue:= FValue.ToString + '%';
+  if Pos('%s', pValue) = 0 then
+    Exit;
 
-  if Rect.Width <> 0 then
-    FTextOffset.X:= Trunc(((Rect.Width - FBorderWidth * 3) / 2) - (FFont.GetTextWidth(FStrValue) / 2)) else
+  FFormat:= pValue;
+end;
+
+procedure TGUIProgressBar.RecalcTextPos;
+var TxtWidth: TFloat;
+begin
+  FStrValue    := Format(FFormat, [ FValue.ToString ]);
+  TxtWidth     := FFont.GetTextWidth(FStrValue);
+  FTextOffset.X:= Round((Rect.Width / 2) - (TxtWidth / 2));
+  FTextOffset.Y:= Round(((Rect.Height - (FBorderWidth * 2)) / 2) - (FFont.Height / 2));
+
+  if Rect.X + FTextOffset.X < Rect.X then
     FTextOffset.X:= 0;
 
-  if Rect.Height <> 0 then
-    FTextOffset.Y:= Trunc(((Rect.Height - (FBorderWidth * 3)) / 2) - (FFont.Height / 2)) else
-    FTextOffset.Y:= 0;
+  if TxtWidth > Rect.Width then
+    FStrValue:= '';
 end;
 
 procedure TGUIProgressBar.RenderText;
@@ -139,13 +158,9 @@ begin
   FFont.RenderText(Rect.X + FTextOffset.X, Rect.Y + FTextOffset.Y, FStrValue, Rect.Width);
 end;
 
-procedure TGUIProgressBar.SetAreaResize;
-begin
-  Area.Rect.SetRect(1, 0, Width - 1, Height -1);
-end;
-
 procedure TGUIProgressBar.SetBorderColor(pColor: TColor);
 begin
+  VertexList.SetVertexTextureMap(0, GUIPalette.GetCellRect(pal_0));
   VertexList.SetGroupColor(GROUP_BORDER, pColor);
 end;
 
@@ -161,7 +176,8 @@ end;
 procedure TGUIProgressBar.SetColor(pColor: TColor);
 begin
   FColor.SetColor(pColor);
-  VertexList.SetGroupColor(GROUP_VALUE, pColor);
+  VertexList.SetVertexTextureMap(4, GUIPalette.GetCellRect(pal_0));
+  VertexList.SetGroupColor(GROUP_VALUE, FColor.GetColor);
 end;
 
 procedure TGUIProgressBar.SetColorGradient(pAColor, pBColor, pCColor, pDColor: TColor);
@@ -169,10 +185,18 @@ begin
   VertexList.SetGroupColorSquare(GROUP_VALUE, [pAColor, pBColor, pCColor, pDColor]);
 end;
 
+procedure TGUIProgressBar.SetDefaultColor;
+begin
+  VertexList.SetVertexTextureMap(0, GUIPalette.GetCellRect(pal_6));
+  VertexList.SetGroupColor(GROUP_BORDER, clWhite);
+  VertexList.SetVertexTextureMap(4, GUIPalette.GetCellRect(pal_3));
+  VertexList.SetGroupColor(GROUP_VALUE , clWhite);
+end;
+
 procedure TGUIProgressBar.SetResize;
 begin
-  VertexList.SetVertexPosSquare(0, 0, 0, Rect.Width, Rect.Height);
-  VertexList.SetVertexPosSquare(4, FBorderWidth, FBorderWidth, GetRectWidthValue, Rect.Height - (FBorderWidth * 2));
+  VertexList.SetSizeSquare(0, Rect);
+  VertexList.SetSizeSquare(4, GetRectWidthValue, FBorderWidth);
   RecalcTextPos;
 end;
 
@@ -187,7 +211,7 @@ begin
     FValue:= 0;
 
   RecalcTextPos;
-  VertexList.SetVertexPosSquare(4, FBorderWidth, FBorderWidth, GetRectWidthValue, Rect.Height - (FBorderWidth * 2));
+  VertexList.SetSizeSquare(4, GetRectWidthValue, FBorderWidth);
 end;
 
 end.

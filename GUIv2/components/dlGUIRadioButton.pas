@@ -24,15 +24,18 @@ type
       FGroup  : Byte; //Группа в которой состоит компонент (для переключения)
     strict private
       procedure ChangeStatus(pChecked: Boolean);
+
+      function GetRadioButtonRect: TGUIObjectRect;
     protected
       procedure SetAreaResize; override;
       procedure SetFontEvent; override; //Событие при создании шрифта
+      procedure SetResize; override;
     public
       constructor Create(pName: String = ''; pTextureLink: TTextureLink = nil);
       procedure RenderText; override;
 
       procedure OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton); override;
-      procedure SendGUIMessage(pMessage: TGUIMessage); override;
+      procedure BroadcastMessage(pMessage: TGUIMessage); override;
     public
       [TXMLSerial] property Checked: Boolean read FChecked write ChangeStatus;
       [TXMLSerial] property Group  : Byte    read FGroup   write FGroup;
@@ -67,8 +70,13 @@ begin
   FTextOffset.SetRect(RADIOBUTTON_SIZE + 4, 0, 0, 0);
   SetTextureLink(pTextureLink);
 
-  VertexList.MakeSquare(Rect.X, Rect.Y, RADIOBUTTON_SIZE, RADIOBUTTON_SIZE, Color, GUIPalette.GetCellRect(pal_RadioButton_uc), GROUP_UNCHECK);
-  VertexList.MakeSquare(Rect.X, Rect.Y, RADIOBUTTON_SIZE, RADIOBUTTON_SIZE, Color, GUIPalette.GetCellRect(pal_RadioButton_ch), GROUP_CHECK, True);
+  VertexList.MakeSquare(GetRadioButtonRect, Color, GUIPalette.GetCellRect(pal_RadioButton_uc), GROUP_UNCHECK);
+  VertexList.MakeSquare(GetRadioButtonRect, Color, GUIPalette.GetCellRect(pal_RadioButton_ch), GROUP_CHECK, True);
+end;
+
+function TGUIRadioButton.GetRadioButtonRect: TGUIObjectRect;
+begin
+  Result.SetRect(Rect.X, Rect.Y, RADIOBUTTON_SIZE, RADIOBUTTON_SIZE);
 end;
 
 procedure TGUIRadioButton.OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton);
@@ -82,10 +90,10 @@ begin
   if Assigned(Parent) then
    if not Checked then
    begin
-     GUIMessage.Msg := MSG_CHNG_RADIOBUTTON;
-     GUIMessage.Self:= Self;
+     GUIMessage.Msg   := MSG_CHNG_RADIOBUTTON;
+     GUIMessage.Sender:= Self;
 
-     Parent.SendGUIMessage(GUIMessage);
+     Parent.BroadcastMessage(GUIMessage);
    end;
 
   Checked:= True;
@@ -98,12 +106,12 @@ begin
   Font.Text(Rect.X + FTextOffset.X, Rect.Y + FTextOffset.Y, FText, Rect.Width);
 end;
 
-procedure TGUIRadioButton.SendGUIMessage(pMessage: TGUIMessage);
+procedure TGUIRadioButton.BroadcastMessage(pMessage: TGUIMessage);
 begin
   case pMessage.Msg of
     MSG_CHNG_RADIOBUTTON:
-      if pMessage.Self <> Self then
-        if TGUIRadioButton(pMessage.Self).Group = Self.Group then
+      if pMessage.Sender <> Self then
+        if TGUIRadioButton(pMessage.Sender).Group = Self.Group then
           ChangeStatus(false);
   end;
 
@@ -111,7 +119,7 @@ end;
 
 procedure TGUIRadioButton.SetAreaResize;
 begin
-  Area.Rect.SetSize(RADIOBUTTON_SIZE, RADIOBUTTON_SIZE);
+  Area.Rect.SetRect(GetRadioButtonRect);
 end;
 
 procedure TGUIRadioButton.SetFontEvent;
@@ -119,6 +127,12 @@ begin
   inherited;
 
   FTextOffset.Y:= -Trunc((Font.Height - RADIOBUTTON_SIZE) / 2) - 1;
+end;
+
+procedure TGUIRadioButton.SetResize;
+begin
+  VertexList.SetSizeSquare(0, GetRadioButtonRect);
+  VertexList.SetSizeSquare(4, GetRadioButtonRect);
 end;
 
 end.

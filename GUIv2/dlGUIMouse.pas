@@ -18,6 +18,8 @@ uses dlGUITypes, dlGUIPaletteHelper, dlGUIObject, dlOpenGL, Graphics;
 
 type
   TGUIMouse = class(TGUIObject)
+    strict private
+      const MOUSE_SIZE = 18;
     public
       constructor Create(pScale: TFloat; pColor: TColor; pTextureLink: TTextureLink);
       procedure OnMouseMove(pX, pY: Integer); override;
@@ -33,6 +35,7 @@ constructor TGUIMouse.Create(pScale: TFloat; pColor: TColor; pTextureLink: TText
 begin
   inherited Create('', gtcObject);
 
+  SetRect(0, 0, MOUSE_SIZE, MOUSE_SIZE);
   FScale   := pScale;
   FModeDraw:= GL_TRIANGLE_FAN;
   FColor.SetColor(pColor);
@@ -41,13 +44,12 @@ begin
 
   SetTextureLink(pTextureLink);
 
-  VertexList.MakeSquare(0, 0, 16, 16, Color, GUIPalette.GetCellRect(pal_Mouse));
+  VertexList.MakeSquare(Rect, Color, GUIPalette.GetCellRect(pal_Mouse));
 end;
 
 procedure TGUIMouse.OnMouseMove(pX, pY: Integer);
 begin
-  X:= pX;
-  Y:= pY;
+  SetPos(pX, pY);
 end;
 
 procedure TGUIMouse.Render;

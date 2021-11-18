@@ -55,7 +55,7 @@ begin
   SetTextureLink(pTextureLink);
 
   //Список вершин
-  VertexList.MakeSquare(Rect.X, Rect.Y, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_2));
+  VertexList.MakeSquare(Rect, Color, GUIPalette.GetCellRect(pal_2));
   //Установим единичную текстуру
   VertexList.SetVertexTextureOne;
 
@@ -67,8 +67,8 @@ end;
 
 procedure TGUIBevel.SetResize;
 begin
-  VertexList.SetVertexPosSquare(0, 0, 0, Rect.Width, Rect.Height);
-  VertexList.SetVertexPosSquare(4, 1, 1, Rect.Width - 2, Rect.Height - 2);
+  VertexList.SetSizeSquare(0, Rect);
+  VertexList.SetSizeSquare(4, Rect, 1);
 end;
 
 procedure TGUIBevel.SetShape(pValue: TGUIBevelShape);

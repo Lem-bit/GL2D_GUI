@@ -85,6 +85,7 @@ type
     constructor Create(pName: String = ''; pTextureLink: TTextureLink = nil);
     destructor Destroy; override;
 
+    procedure BeforeOnMouseDown(pX, pY: Integer; Button: TGUIMouseButton); override;
     procedure OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton); override;
     procedure OnMouseUp(pX, pY: Integer; Button: TGUIMouseButton); override;
     procedure OnMouseMove(pX, pY: Integer); override;
@@ -164,6 +165,18 @@ begin
 
   SetMaxVertTracker;
   SetMaxHorizTracker;
+end;
+
+procedure TGUIListBox.BeforeOnMouseDown(pX, pY: Integer; Button: TGUIMouseButton);
+var i: integer;
+begin
+  for i := FYOffset to FItem.Count - 1 do
+    if TGUIListBoxItem(FItem.Items[i]).OnHit(pX, pY) then
+    begin
+      FSelected:= SelectItem(FSelected, i);
+      SetAction([goaItemSelect]);
+      Break;
+    end;
 end;
 
 procedure TGUIListBox.Clear;
@@ -264,7 +277,7 @@ begin
   SetRect(0, 0, 200, 200);
 
   //Область компонента
-  VertexList.MakeSquare(Rect.X, Rect.Y, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_Frame));
+  VertexList.MakeSquare(Rect, Color, GUIPalette.GetCellRect(pal_Frame));
   //Рамка
   VertexList.MakeSquare(FBorder, FBorder, Rect.Width - (FBorder * 2), Rect.Height - (FBorder * 2), Color, GUIPalette.GetCellRect(pal_2));
   VertexList.MakeSquare(FBorder, FBorder, FMaxWidth, FMaxHeight, Color, GUIPalette.GetCellRect(pal_0), GR_MAIN);
@@ -327,20 +340,6 @@ begin
     FTracker[i].OnMouseDown(pX, pY, Button);
     FClickOnTrack:= FTracker[i].OnHit(pX, pY) or FClickOnTrack;
   end;
-
-  if (FClickOnTrack) then
-    Exit;
-
-  if not ItemAt(FYOffset) then
-    Exit;
-
-  for i := FYOffset to FItem.Count - 1 do
-    if TGUIListBoxItem(FItem.Items[i]).OnHit(pX, pY) then
-    begin
-      FSelected:= SelectItem(FSelected, i);
-      SetAction([goaItemSelect]);
-      Break;
-    end;
 
 end;
 
@@ -578,19 +577,19 @@ begin
   FSelected     := False;
 
   Area.Show      := True;
-  Area.Offset    := -1;
+  Area.Offset    := 0;
   Area.AnimEnable:= True;
   Area.Speed     := 0.05;
   Area.DrawMode  := GL_QUADS;
-  FSelectedColor := $004F4F4F;
   Area.Blend.Set_SrcAlpha_OneMinusSrcAlpha;
+  FSelectedColor := $004F4F4F;
 
   VertexList.MakeSquare(0, 0, 0, 0, Color, nil);
 end;
 
 procedure TGUIListBoxItem.Render;
 begin
-  VertexList.SetVertexPosSquare(0, 0, 0, Rect.Width, Rect.Height);
+  VertexList.SetSizeSquare(0, Rect);
 
   if FSelected then
     Color:= FSelectedColor
@@ -598,8 +597,6 @@ begin
     Color:= FBrushColor;
 
   inherited;
-
- // FRect.Render();
 end;
 
 procedure TGUIListBoxItem.RenderText;

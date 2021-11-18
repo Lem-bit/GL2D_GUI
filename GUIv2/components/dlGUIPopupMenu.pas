@@ -19,39 +19,29 @@ uses Classes, dlOpenGL, SysUtils, Graphics, dlGUIFont, dlGUITypes, dlGUIObject, 
 type
   TGUIMenuItem = class(TGUIObject)
     strict private
+      const DEFAULT_ITEM_HEIGHT = 21;
+      const DEFAULT_LINE_HEIGHT = 10;
+      const DIVIDE_LINE = '--'; //Разделяющая линия
+    strict private
       FMenuName       : String;  //Название меню
-      FDisable        : Boolean; //Меню отключенное
       FMenuLine       : Boolean; //Для элемента --
-      FMenuCaption    : Boolean; //Это заголовок
       FFontCustomColor: TColor;  //Кастомный цвет шрифта
-      FBackgroundColor: TColor;  //Цвет бэкграунда
-
-      //Для оптимизации прорисовки
-      FDrawSelected   : Boolean; //Как прорисован элемент как выбранный или нет
     private
       function GetMenuName: String;
-      //Переключить отображение вершин с обычного на выбранный и обратно
-      procedure DrawMenuSelected(pSelected: Boolean);
       //Проверить можно ли установить фокус на меню
       function FocusDisable: Boolean;
-      //Установить фоновый текст у меню
-      procedure SetBackgroundColor(pColor: TColor);
     private
       property FontCustomColor: TColor read FFontCustomColor write FFontCustomColor;
-      property MenuLine: Boolean       read FMenuLine        write FMenuLine;
-      property MenuCaption: Boolean    read FMenuCaption     write FMenuCaption;
     published
       procedure SetResize; override;
     public
       constructor Create(pName: String; pMenuName: String; pX, pY: Integer);
       destructor Destroy; override;
+
+      function OnHit(pX, pY: Integer): Boolean; override;
       procedure RenderText; override;
-      procedure SetColorGradient(pVertexA, pVertexB, pVertexC, pVertexD: TColor);
     public
-      [TXMLSerial] property IsCaption      : Boolean read FMenuCaption     write FMenuCaption;
-      [TXMLSerial] property Disable        : Boolean read FDisable         write FDisable;
-      [TXMLSerial] property MenuName       : String  read GetMenuName      write FMenuName;
-      [TXMLSerial] property BackgroundColor: TColor  read FBackgroundColor write SetBackgroundColor;
+      [TXMLSerial] property MenuName: String  read GetMenuName write FMenuName;
   end;
 
   TGUIPopupMenu = class(TGUIObject)
@@ -73,32 +63,27 @@ type
       destructor Destroy; override;
 
       //Добавить элемент меню
-      procedure Add(pMenuName: String; pDisable: Boolean = False; pProc: TGUIProc = nil; pColor: TColor = clWhite);
+      procedure Add(pMenuName: String; pEnable: Boolean = True; pProc: TGUIProc = nil; pColor: TColor = clWhite);
       //Удалить пункт меню
       procedure DeleteItem(pIndex: Integer); overload;
       procedure DeleteItem(pMenuName: String); overload;
       //Кол-во элементов меню
       function Count: integer;
-
-      procedure SetTextureLink(pTextureLink: TTextureLink); override;
     public
       [TXMLSerial] OnPopup: TGUIProc;
     public
+      //Установить ссылку на текстуру
+      procedure SetTextureLink(pTextureLink: TTextureLink); override;
+
       procedure OnMouseMove(pX, pY: Integer); override;
       procedure OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton); override;
       procedure OnMouseUp(pX, pY: Integer; Button: TGUIMouseButton); override;
-      procedure AfterObjRender; override;
-      procedure RenderText; override;
       procedure Render; override;
     public
       property Item[index: integer]: TGUIMenuItem read GetItem;
   end;
 
 implementation
-
-const GROUP_MENU     = 0;
-      GROUP_SELECTOR = 1;
-      DIVIDE_LINE    = '--'; //Разделяющая линия
 
 { TGUIPopupMenu }
 
@@ -168,26 +153,18 @@ begin
   Result:= (pIndex > -1) and (pIndex < FMenu.Count);
 end;
 
-procedure TGUIPopupMenu.Add(pMenuName: String; pDisable: Boolean = False; pProc: TGUIProc = nil; pColor: TColor = clWhite);
+procedure TGUIPopupMenu.Add(pMenuName: String; pEnable: Boolean = True; pProc: TGUIProc = nil; pColor: TColor = clWhite);
 var Item: TGUIMenuItem;
 begin
   Item:= TGUIMenuItem.Create(Self.Name + '.Menu', pMenuName, 0, 0);
-  Item.Disable        := pDisable;
+  Item.SetTextureLink(GetTextureLink);
+  Item.Font.SetTextureLink(Font.GetTextureLink);
+  Item.Enable         := pEnable;
   Item.FontCustomColor:= pColor;
   Item.Color          := Color;
   Item.Parent         := Self;
   Item.OnClick        := pProc;
-  Item.SetTextureLink(Self.GetTextureLink);
-  Item.Font.SetTextureLink(Self.Font.GetTextureLink);
   FMenu.Add(Item);
-
-  PrepareMenuItems;
-end;
-
-procedure TGUIPopupMenu.AfterObjRender;
-begin
-  inherited;
-
 end;
 
 procedure TGUIPopupMenu.OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton);
@@ -230,35 +207,21 @@ begin
 end;
 
 procedure TGUIPopupMenu.OnMouseMove(pX, pY: Integer);
-var FID : Integer;
+var i: integer;
     Item: TGUIMenuItem;
 begin
-  inherited;
-
-  //Если этот же элемент то нет смысла искать какой выбран
-  if IsExists(FSelected) then
-    if TGUIMenuItem(FMenu.Items[FSelected]).OnHit(pX, pY) then Exit;
+  if not Assigned(FMenu) then
+    Exit;
 
   FSelected:= -1;
-
-  for FID := 0 to FMenu.Count - 1 do
+  for i := 0 to FMenu.Count - 1 do
   begin
-    Item:= TGUIMenuItem(FMenu.Items[FID]);
-    Item.DrawMenuSelected(False);
+    Item:= TGUIMenuItem(FMenu.Items[i]);
+    Item.OnMouseMove(pX, pY);
 
-    if not Item.OnHit(pX, pY) then Continue;
-    if FSelected > -1         then Continue;
-
-    FSelected  := FID;
-
-    if Item.MenuLine    then Continue;
-    if Item.MenuCaption then Continue;
-
-    Item.DrawMenuSelected(True);
+    if Item.OnHit(pX, pY) then
+      FSelected:= i;
   end;
-
-  if FSelected < 0 then
-    VertexList.SetGroupHide(GROUP_SELECTOR, True);
 end;
 
 procedure TGUIPopupMenu.OnMouseUp(pX, pY: Integer; Button: TGUIMouseButton);
@@ -290,46 +253,41 @@ begin
   MaxWidth:= 0;
   MaxHeight:= 0;
 
+  if not Assigned(Parent) then
+    Exit;
+
   //Ищем макс ширину текста
   for FID := 0 to FMenu.Count - 1 do
-    with TGUIMenuItem(FMenu.Items[FID]) do
-    begin
-      ItemW:= Trunc(Font.GetTextWidth(MenuName));
-       if ItemW > MaxWidth then MaxWidth:= ItemW;
-    end;
+  begin
+    Item:= TGUIMenuItem(FMenu.Items[FID]);
+    if Item.Font.GetTextureLink = nil then
+      Item.font.SetTextureLink(Self.Font.GetTextureLink);
+
+    ItemW:= Trunc(Item.Font.GetTextWidth(Item.MenuName));
+    if ItemW > MaxWidth then
+      MaxWidth:= ItemW;
+  end;
+
+  MaxWidth:= MaxWidth + 4;
 
   //Пересчитываем все элементы меню
   for FID := 0 to FMenu.Count - 1 do
   begin
     Item:= TGUIMenuItem(FMenu.Items[FID]);
 
-    //Назначение каких либо общих свойств
-    if Self.GetTextureLink <> nil then
-      Item.SetTextureLink(Self.GetTextureLink);
-
     //Размеры элемента
     Item.SetRect(
       Self.Rect.X,
-      MaxHeight + Self.Rect.Y,
-      MaxWidth + (Item.FTextOffset.X * 4),
-      Round(Item.Font.Height) + (Item.FTextOffset.Y * 4)
+      Self.Rect.Y + MaxHeight,
+      MaxWidth,
+      Item.Height
     );
 
-    if (Item.Blend.Alpha <> 0.0) then
-      Item.Blend.Alpha:= Self.Blend.Alpha;
-
-    if Item.MenuLine then
-      Item.Height:= Item.Height div 2;
-
-    Item.VertexList.SetGroupHide(GROUP_MENU    , False);
-    Item.VertexList.SetGroupHide(GROUP_SELECTOR, True);
-
     Inc(MaxHeight, Item.Height);
-
-    Item.SetResize;
   end;
 
   Rect.SetSize(MaxWidth, MaxHeight);
+  VertexList.SetRectSquare(0, Rect);
 
 end;
 
@@ -340,8 +298,6 @@ begin
 
   for FID := 0 to FMenu.Count - 1 do
     TGUIMenuItem(FMenu.Items[FID]).FFont.SetTextureLink(Self.Font.GetTextureLink);
-
-  PrepareMenuItems;
 end;
 
 procedure TGUIPopupMenu.SetHide(pHide: Boolean);
@@ -351,33 +307,38 @@ begin
 end;
 
 procedure TGUIPopupMenu.SetTextureLink(pTextureLink: TTextureLink);
+var i: integer;
+    Item: TGUIMenuItem;
 begin
   inherited;
-  PrepareMenuItems;
+
+  if not Assigned(FMenu) then
+    Exit;
+
+  for i := 0 to FMenu.Count - 1 do
+  begin
+    Item:= TGUIMenuItem(FMenu[i]);
+    Item.SetTextureLink(pTextureLink);
+  end;
+
 end;
 
 procedure TGUIPopupMenu.Render;
 var FID: Integer;
+    Item: TGUIMenuItem;
 begin
-  if FFont._State <> gfsNone then
-    SetFontEvent;
-
   if FHide then
     Exit;
 
-  for FID := 0 to FMenu.Count - 1 do
-    TGUIMenuItem(FMenu.Items[FID]).Render;
-
-end;
-
-procedure TGUIPopupMenu.RenderText;
-var FID: Integer;
-begin
-  inherited;
+  if FFont._State <> gfsNone then
+    SetFontEvent;
 
   for FID := 0 to FMenu.Count - 1 do
-    with TGUIMenuItem(FMenu.Items[FID]) do
-      RenderText;
+  begin
+    Item:= TGUIMenuItem(FMenu.Items[FID]);
+    Item.Render;
+  end;
+
 end;
 
 { TGUIMenuItem }
@@ -385,24 +346,30 @@ end;
 constructor TGUIMenuItem.Create(pName, pMenuName: String; pX, pY: Integer);
 begin
   inherited Create(pName);
+  FMenuLine := SameText(pMenuName, DIVIDE_LINE);
+  FArea.Show:= not FMenuLine;
+
   FMenuName:= pMenuName;
-  FMenuLine:= SameText(FMenuName, DIVIDE_LINE);
+  FArea.DrawMode:= GL_QUADS;
+  FArea.Color.SetColor($00303030);
   FTextOffset.SetPos(2, 2);
 
   if FMenuLine then
   begin
-    FMenuName:= '';
-    VertexList.MakeSquare(0, 0, 100, 25, Color, GUIPalette.GetCellRect(pal_PopupDiv), GROUP_MENU);
+    SetRect(0, 0, 0, DEFAULT_LINE_HEIGHT);
+    VertexList.MakeSquare(Rect, Color, GUIPalette.GetCellRect(pal_PopupDiv));
   end
   else
-    VertexList.MakeSquare(0, 0, 100, 25, Color, GUIPalette.GetCellRect(pal_3), GROUP_MENU);
+  begin
+    SetRect(0, 0, 0, DEFAULT_ITEM_HEIGHT);
+    VertexList.MakeSquare(Rect, Color, GUIPalette.GetCellRect(pal_3));
+  end;
 
-  VertexList.MakeSquare(0, 0, 100, 25, Color, GUIPalette.GetCellRect(pal_Frame), GROUP_SELECTOR, True);
 end;
 
 function TGUIMenuItem.FocusDisable: Boolean;
 begin
-  Result:= FDisable or FMenuLine or FMenuCaption;
+  Result:= (not FEnable) or FMenuLine;
 end;
 
 function TGUIMenuItem.GetMenuName: String;
@@ -413,37 +380,30 @@ begin
     Result:= FMenuName;
 end;
 
+function TGUIMenuItem.OnHit(pX, pY: Integer): Boolean;
+begin
+  Result:=
+     (pX >= FRect.X) and
+     (pY >= FRect.Y) and
+     (pX <= FRect.X + FRect.Width) and
+     (pY <= FRect.Y + FRect.Height - 1);
+end;
+
 procedure TGUIMenuItem.RenderText;
 begin
   inherited;
 
-  if FDisable then
+  if not FEnable then
     Font.Color:= clGray
   else
     Font.Color:= FFontCustomColor;
 
-  Font.Text(Rect.X + FTextOffset.X, Rect.Y + FTextOffset.Y, FMenuName);
-end;
-
-procedure TGUIMenuItem.SetBackgroundColor(pColor: TColor);
-begin
-  FBackgroundColor:= pColor;
-  VertexList.SetGroupColor(GROUP_MENU, pColor);
-end;
-
-procedure TGUIMenuItem.SetColorGradient(pVertexA, pVertexB, pVertexC, pVertexD: TColor);
-begin
-  VertexList.SetColor(0, pVertexA);
-  VertexList.SetColor(1, pVertexB);
-  VertexList.SetColor(2, pVertexC);
-  VertexList.SetColor(3, pVertexD);
+  Font.Text(Rect.X + FTextOffset.X, Rect.Y + FTextOffset.Y, FMenuName, 0, True);
 end;
 
 procedure TGUIMenuItem.SetResize;
 begin
-  inherited;
-  VertexList.SetVertexPosSquare(0, 0, 0, Rect.Width, Rect.Height);
-  VertexList.SetVertexPosSquare(4, 0, 0, Rect.Width, Rect.Height);
+  VertexList.SetSizeSquare(0, Rect);
 end;
 
 destructor TGUIMenuItem.Destroy;
@@ -452,15 +412,5 @@ begin
   inherited;
 end;
 
-procedure TGUIMenuItem.DrawMenuSelected(pSelected: Boolean);
-begin
-  //Не переключаем лишний раз если элемент не поменял вид прорисовки
-  if FDrawSelected = pSelected then
-    Exit;
-
-  FDrawSelected:= pSelected;
-  VertexList.SetGroupHide(GROUP_MENU, pSelected);
-  VertexList.SetGroupHide(GROUP_SELECTOR, not pSelected);
-end;
 
 end.

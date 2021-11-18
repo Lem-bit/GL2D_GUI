@@ -46,6 +46,7 @@ type
       procedure OnMouseMove(pX, pY: Integer); override;
 
       procedure RecalcChildItemPos;
+      procedure SetAreaResize; override;
 
       procedure Render; override;
       procedure RenderText; override;
@@ -165,14 +166,13 @@ end;
 constructor TGUIMainMenu.Create(pName: String = ''; pTextureLink: TTextureLink = nil);
 begin
   inherited Create('MainMenu', gtcMainMenu);
-
   FGroup     := TList.Create;
   FCurrOffset:= 0;
   FOpened    := False;
 
   SetRect(0, 0, 100, 20);
   SetTextureLink(pTextureLink);
-  VertexList.MakeSquare(0, 0, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_Window));
+  VertexList.MakeSquare(Rect, Color, GUIPalette.GetCellRect(pal_Window));
 end;
 
 destructor TGUIMainMenu.Destroy;
@@ -217,7 +217,6 @@ var i: integer;
     Group: TGUIMainMenuGroup;
     HitGroup: Boolean;
 begin
-  inherited;
   HitGroup:= False;
 
   if OnHit(pX, pY) then
@@ -349,7 +348,7 @@ begin
 
     //Сдвигаем
     PLeft:= PLeft + Group.OffsetLeft;
-    Group.Rect.SetPos(PLeft, Group.Rect.Y);
+    Group.SetPos(PLeft, Group.Rect.Y);
 
     //Добавляем ширину меню
     PLeft:= PLeft + Group.Width + 1;
@@ -362,7 +361,7 @@ end;
 procedure TGUIMainMenu.ResizeWnd(pWidth: Integer);
 begin
   Rect.SetSize(pWidth, Rect.Height);
-  VertexList.SetVertexPosSquare(0, 0, 0, Rect.Width, Rect.Height);
+  VertexList.SetSizeSquare(0, Rect);
 end;
 
 procedure TGUIMainMenu.SetOpened(value: Boolean);
@@ -407,15 +406,13 @@ begin
   if not Assigned(FArea) then
     Exit;
 
-  SetAreaResize;
-
   Area.Visible := (FShow or FOnMouse) and FEnable;
   Area.DrawMode:= GL_QUADS;
 
   if FShow and (not FOnMouse) then
     Area.DrawMode:= GL_LINE_LOOP;
 
-  Area.Render;
+  inherited;
 end;
 
 function TGUIMainMenuGroup.Count: integer;
@@ -442,7 +439,7 @@ begin
   SetCaption(pName);
   Font.SetTextureLink(pFontTextureLink);
   SetTextureLink(pTextureLink);
-  VertexList.MakeSquare(0, 0, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_Window));
+  VertexList.MakeSquare(Rect, Color, GUIPalette.GetCellRect(pal_Window));
 
   FBufColor    := Font.Color;
   FColorDisable:= clGray;
@@ -753,7 +750,7 @@ end;
 
 procedure TGUIMainMenuGroup.SetResize;
 begin
-  VertexList.SetVertexPosSquare(0, 0, 0, Rect.Width, Rect.Height);
+  VertexList.SetSizeSquare(0, Rect);
 end;
 
 procedure TGUIMainMenuGroup.SetShow(value: Boolean);
@@ -797,13 +794,13 @@ begin
   if SameText(ACaptionName, MENU_LINE) then
   begin
     FType:= mmtLine;
+    VertexList.MakeSquare(Rect, Color, GUIPalette.GetCellRect(pal_PopupDiv));
     Rect.SetSize(Round(Font.GetTextWidth(ACaptionName)) + 10, DEF_LINE_HEIGHT);
-    VertexList.MakeSquare(0, 0, 0, 0, Color, GUIPalette.GetCellRect(pal_PopupDiv));
   end
   else
   begin
+    VertexList.MakeSquare(Rect, Color, GUIPalette.GetCellRect(pal_3));
     Rect.SetSize(Round(Font.GetTextWidth(ACaptionName)) + 10, Round(Font.GetTextHeight(ACaptionName)) + 10);
-    VertexList.MakeSquare(0, 0, 0, 0, Color, GUIPalette.GetCellRect(pal_3));
 
     Area.Show    := True;
     Area.Offset  := -1;
@@ -978,6 +975,11 @@ begin
   Font.Text(Rect.X + FTextOffset.X, Rect.Y + FYPos, FCaption, 0, True);
 end;
 
+procedure TGUIMainMenuItem.SetAreaResize;
+begin
+  Area.Rect.SetRect(Rect, 1);
+end;
+
 procedure TGUIMainMenuItem.SetCaption(AValue: string);
 begin
   FCaption:= AValue;
@@ -1047,7 +1049,7 @@ end;
 
 procedure TGUIMainMenuItem.SetResize;
 begin
-  VertexList.SetVertexPosSquare(0, 0, 0, Rect.Width, Rect.Height);
+  VertexList.SetSizeSquare(0, Rect);
   CalcTextYPos;
 end;
 

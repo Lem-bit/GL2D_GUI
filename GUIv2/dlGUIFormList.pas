@@ -42,7 +42,6 @@ interface
 
        //Создать окно
        procedure AddForm(pForm: TGUIForm);
-       procedure CreateForm(pName, pCaption: String; pX, pY, pWidth, pHeight: Integer; pTextureLink: TTextureLink = nil; pTextureFont: TTextureLink = nil);
 
        //Прорисовать все окна
        procedure Render;
@@ -103,24 +102,28 @@ begin
   FCurrentForm:= nil;
 end;
 
-procedure TGUIFormList.CreateForm(pName, pCaption: String; pX, pY, pWidth, pHeight: Integer; pTextureLink: TTextureLink = nil; pTextureFont: TTextureLink = nil);
-begin
-  AddForm(TGUIForm.Create(pName, pCaption, pX, pY, pWidth, pHeight, pTextureLink, pTextureFont));
-end;
-
 procedure TGUIFormList.AddForm(pForm: TGUIForm);
 begin
   if not Assigned(pForm) then
     Exit;
 
-  pForm.ID:= FFormList.Count + 1;
   FFormList.Add(pForm);
   FCurrentForm:= nil;
 end;
 
 function TGUIFormList.CurrentFormAccessible: Boolean;
+var Form: TGUIForm;
 begin
-  Result:= (GetCurrentWindow <> nil) and (not GetCurrentWindow.Hide);
+  Result:= False;
+
+  Form:= GetCurrentWindow;
+  if not Assigned(Form) then
+    Exit;
+
+  if Form.Hide then
+    Exit;
+
+  Result:= True;
 end;
 
 procedure TGUIFormList.CurrentFormDeactivate;
@@ -230,7 +233,11 @@ begin
 
   //Проверим сначала у текущей формы
   if Assigned(TGUIForm(FCurrentForm)) then
-    Result:= TGUIForm(FCurrentForm).OnHit(pX, pY);
+  begin
+    Form:= TGUIForm(FCurrentForm);
+    if not Form.Hide then
+      Result:= TGUIForm(FCurrentForm).OnHitByComponent(pX, pY);
+  end;
 
   if Result then
     Exit;

@@ -70,15 +70,18 @@ begin
   RecalcTextPos;
   SetTextureLink(pTextureLink);
 
-  VertexList.MakeSquare(Rect.X, Rect.Y, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_Frame), GROUP_UP);
+  VertexList.MakeSquare(Rect, Color, GUIPalette.GetCellRect(pal_Frame), GROUP_UP);
   VertexList.MakeSquareOffset(0, 1, Color, GUIPalette.GetCellRect(pal_Window), GROUP_UP_BORDER, FFlat);
 
-  VertexList.MakeSquare(Rect.X, Rect.Y, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_2), GROUP_DOWN, True);
+  VertexList.MakeSquare(Rect, Color, GUIPalette.GetCellRect(pal_2), GROUP_DOWN, True);
   VertexList.MakeSquareOffset(8, 1, Color, GUIPalette.GetCellRect(pal_3), GROUP_DOWN_BORDER, True);
 end;
 
 procedure TGUIButton.OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton);
 begin
+  if not OnHit(pX, pY) then
+    Exit;
+
   if Button <> gmbLeft then
     Exit;
 
@@ -134,12 +137,9 @@ begin
   FFlat:= pFlat;
 
   if FFlat then
-    VertexList.SetVertexTextureMap(0, GUIPalette.GetCellRect(4))
-  else
-    VertexList.SetVertexTextureMap(0, GUIPalette.GetCellRect(5));
+    VertexList.SetVertexTextureMap(0, GUIPalette.GetCellRect(pal_Window));
 
-  VertexList.SetGroupHide(GROUP_DOWN_BORDER, FFlat);
-  VertexList.SetGroupHide(GROUP_UP_BORDER  , FFlat);
+  OnMouseUp(0, 0, gmbNone);
   SetAction([goaTextureNeedRecalc]);
 end;
 
@@ -152,11 +152,11 @@ end;
 
 procedure TGUIButton.SetResize;
 begin
-  VertexList.SetVertexPosSquare(0, 0, 0, Rect.Width, Rect.Height);
-  VertexList.SetVertexPosSquare(4, 1, 1, Rect.Width - 2, Rect.Height - 2);
+  VertexList.SetSizeSquare(0, Rect);
+  VertexList.SetSizeSquare(4, Rect, 1);
 
-  VertexList.SetVertexPosSquare(8, 0, 0, Rect.Width, Rect.Height);
-  VertexList.SetVertexPosSquare(12, 1, 1, Rect.Width - 2, Rect.Height - 2);
+  VertexList.SetSizeSquare(8 , Rect);
+  VertexList.SetSizeSquare(12, Rect, 1);
 
   RecalcTextPos;
 end;

@@ -58,6 +58,7 @@ type
       procedure OnKeyUp(var Key: Word; Shift: TShiftState); override;
       procedure OnKeyPress(Key: Char); override;
 
+      procedure BeforeOnMouseDown(pX, pY: Integer; Button: TGUIMouseButton); override;
       procedure OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton); override;
       procedure OnMouseUp(pX, pY: Integer; Button: TGUIMouseButton); override;
       procedure OnMouseMove(pX, pY: Integer); override;
@@ -92,6 +93,18 @@ procedure TGUIComboBox.Add(const pText: String);
 begin
   if Assigned(FComponent.Items[Ord(TElement.eList)]) then
     FList.Add(pText);
+end;
+
+procedure TGUIComboBox.BeforeOnMouseDown(pX, pY: Integer; Button: TGUIMouseButton);
+var i: integer;
+    Comp: TGUIObject;
+begin
+  for i := 0 to FComponent.Count - 1 do
+  begin
+    Comp:= TGUIObject(FComponent[i]);
+    if Comp.OnHit(pX, pY) then
+      Comp.BeforeOnMouseDown(pX, pY, Button);
+  end;
 end;
 
 procedure TGUIComboBox.ChangeButtonImage;
@@ -131,6 +144,7 @@ begin
 
   FButtonSize:= Rect.Height;
   Area.Show  := True;
+  RenderProps:= [rpRenderLast];
 
   FComponent.Add(TGUIEditBox.Create('cbEdit' , pTextureLink));
   FComponent.Add(TGUIButton.Create('cbButton', pTextureLink));
@@ -145,6 +159,7 @@ begin
   FList.Hide:= True;
   FList.LineSpacing:= 1;
   FList.OnElementSelect:= OnElementSelect;
+  FList.RenderProps:= [rpSkipScissor];
 
   FButton.OnClick:= OnButtonClick;
   ChangeButtonImage;
@@ -320,18 +335,25 @@ end;
 
 procedure TGUIComboBox.OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton);
 var i: integer;
+    Comp: TGUIObject;
 begin
   if not FEnable then
     Exit;
 
+  SetAction([goaDown]);
+
   for i := 0 to FComponent.Count - 1 do
-    if TGUIObject(FComponent[i]).OnHit(pX, pY) then
-    begin
-      TGUIObject(FComponent[i]).SetAction([goaFocused]);
-      TGUIObject(FComponent[i]).OnMouseDown(pX, pY, Button);
-    end
+  begin
+    Comp:= TGUIObject(FComponent[i]);
+
+    if FButton.OnHit(pX, pY) then
+      Comp.SetAction([goaFocused]);
+
+    if Comp.OnHit(pX, pY) then
+      Comp.OnMouseDown(pX, pY, Button)
     else
-      TGUIObject(FComponent[i]).RemoveAction([goaFocused]);
+      Comp.RemoveAction([goaFocused]);
+  end;
 end;
 
 procedure TGUIComboBox.OnMouseMove(pX, pY: Integer);
@@ -355,8 +377,7 @@ end;
 procedure TGUIComboBox.OnMouseUp(pX, pY: Integer; Button: TGUIMouseButton);
 var i: integer;
 begin
- { if goaDown in FEdit.GetAction then
-    OnButtonClick(nil, nil);}
+  RemoveAction([goaDown]);
 
   for i := 0 to FComponent.Count - 1 do
     TGUIObject(FComponent[i]).OnMouseUp(pX, pY, Button);
@@ -378,9 +399,13 @@ end;
 
 procedure TGUIComboBox.Render;
 var i: integer;
+    Comp: TGUIObject;
 begin
   for i := 0 to FComponent.Count - 1 do
-    TGUIObject(FComponent[i]).Render;
+  begin
+    Comp:= TGUIObject(FComponent[i]);
+    Comp.Render;
+  end;
 
   inherited;
 end;
@@ -403,7 +428,7 @@ end;
 
 procedure TGUIComboBox.SetAreaResize;
 begin
-  Area.Rect.SetRect(0, 0, Width, FButtonSize);
+  Area.Rect.SetRect(FEdit.Rect);
 end;
 
 procedure TGUIComboBox.SetFontEvent;

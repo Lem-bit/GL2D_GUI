@@ -36,6 +36,10 @@ type
 
     FOrient     : TGUIOrientation; //Ориентация
   strict private
+    function GetRectTracker: TGUIObjectRect; //Рамка (область трекера)
+    function GetRectTrack  : TGUIObjectRect; //Трекер
+    function GetRectOffset : TGUIObjectRect; //Область за трекером
+  strict private
     function GetColor: TColor;
 
     procedure RecalcTextPos;
@@ -53,13 +57,12 @@ type
     procedure SetFontEvent; override;
     procedure SetResize; override;
     procedure SetColor(pColor: TColor); override;
-    procedure SetAreaResize; override;
   public
     [TXMLSerial] OnTrackMin : TGUIProc;
     [TXMLSerial] OnTrackMax : TGUIProc;
     [TXMLSerial] OnTrackMove: TGUIProc;
 
-    constructor Create(pName: String = ''; pTextureLink: TTextureLink = nil; pOrient: TGUIOrientation = goHorizontal);
+    constructor Create(pName: String = ''; pTextureLink: TTextureLink = nil);
     procedure RenderText; override;
 
     procedure OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton); override;
@@ -80,16 +83,20 @@ implementation
 
 { TGUIButton }
 
-constructor TGUITrackBar.Create(pName: String = ''; pTextureLink: TTextureLink = nil; pOrient: TGUIOrientation = goHorizontal);
+constructor TGUITrackBar.Create(pName: String = ''; pTextureLink: TTextureLink = nil);
 begin
   inherited Create(pName, gtcTrackBar);
+
+  case FOrient of
+    goHorizontal: Rect.SetRect(0, 0, 150, 15);
+    goVertical  : Rect.SetRect(0, 0, 15, 150);
+  end;
 
   Value       := 0; //Специально не FValue
   FMaxValue   := 100;
   FBorderWidth:= 1;
 
   Color       := $171717;
-  FOrient     := pOrient;
   FFillColor  := Color;
   FTrackWidth := 10;
   FTrackPos   := 0;
@@ -99,33 +106,7 @@ begin
   Area.Show   := True;
 
   SetTextureLink(pTextureLink);
-
-  case FOrient of
-    goHorizontal: begin
-      Rect.SetRect(0, 0, 150, 15);
-      //Рамка
-      VertexList.MakeSquare(0, 0, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_2));
-      //Область трекера
-      VertexList.MakeSquareOffset(0, 1, Color, GUIPalette.GetCellRect(pal_0));
-      //Область заполнения за трекером
-      VertexList.MakeSquareOffset(0, 2, FFillColor, GUIPalette.GetCellRect(pal_0), GROUP_FILL);
-      //Трекер
-      VertexList.MakeSquare(0, 0, FTrackWidth, Rect.Height, FTrackColor, GUIPalette.GetCellRect(pal_Track), GROUP_TRACK);
-    end;
-
-    goVertical: begin
-      Rect.SetRect(0, 0, 15, 150);
-      //Рамка
-      VertexList.MakeSquare(0, 0, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_2));
-      //Область трекера
-      VertexList.MakeSquareOffset(0, 1, Color, GUIPalette.GetCellRect(pal_0));
-      //Область заполнения за трекером
-      VertexList.MakeSquareOffset(0, 2, FFillColor, GUIPalette.GetCellRect(pal_0), GROUP_FILL);
-      //Трекер
-      VertexList.MakeSquare(0, 0, Rect.Width, FTrackWidth, FTrackColor, GUIPalette.GetCellRect(pal_Track), GROUP_TRACK);
-    end;
-  end;
-
+  SetOrient(goHorizontal);
 end;
 
 function TGUITrackBar.GetCellValue: TFloat;
@@ -153,6 +134,29 @@ begin
     goVertical:
       Result:= Height - FTrackWidth;
   end;
+end;
+
+function TGUITrackBar.GetRectOffset: TGUIObjectRect;
+begin
+  Result.SetRect(0, 0, 0, 0);
+  case FOrient of
+    goHorizontal: Result.SetRect(0, 0, FTrackPos + 1, Rect.Height);
+    goVertical  : Result.SetRect(0, FTrackPos, Rect.Width, Rect.Height - FTrackPos);
+  end;
+end;
+
+function TGUITrackBar.GetRectTrack: TGUIObjectRect;
+begin
+  Result.SetRect(0, 0, 0, 0);
+  case FOrient of
+    goHorizontal: Result.SetRect(FTrackPos, 0, FTrackWidth, Rect.Height);
+    goVertical  : Result.SetRect(0, FTrackPos, Rect.Width, FTrackWidth);
+  end;
+end;
+
+function TGUITrackBar.GetRectTracker: TGUIObjectRect;
+begin
+  Result.SetRect(Rect.X, Rect.Y, Rect.Width, Rect.Height);
 end;
 
 procedure TGUITrackBar.OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton);
@@ -254,11 +258,6 @@ begin
   Font.Text(Rect.X + TextRect.X, Rect.Y + TextRect.Y, FValue.ToString, 0);
 end;
 
-procedure TGUITrackBar.SetAreaResize;
-begin
-  Area.Rect.SetRect(0, -1, Rect.Width + 1, Rect.Height + 1);
-end;
-
 procedure TGUITrackBar.SetColor(pColor: TColor);
 begin
   FColor.SetColor(pColor);
@@ -293,12 +292,22 @@ end;
 procedure TGUITrackBar.SetOrient(pValue: TGUIOrientation);
 begin
   FOrient:= pValue;
+  VertexList.Clear;
+
+  //Рамка
+  VertexList.MakeSquare(GetRectTracker, Color, GUIPalette.GetCellRect(pal_2));
+  //Область трекера
+  VertexList.MakeSquareOffset(0, 1, Color, GUIPalette.GetCellRect(pal_0));
+  //Область заполнения за трекером
+  VertexList.MakeSquareOffset(0, 2, FFillColor, GUIPalette.GetCellRect(pal_0), GROUP_FILL);
+  //Трекер
+  VertexList.MakeSquare(GetRectTrack, FTrackColor, GUIPalette.GetCellRect(pal_Track), GROUP_TRACK);
 end;
 
 procedure TGUITrackBar.SetResize;
 begin
-  VertexList.SetVertexPosSquare(0, 0, 0, Rect.Width, Rect.Height);
-  VertexList.SetVertexPosSquare(4, 1, 1, Rect.Width - 2, Rect.Height - 2);
+  VertexList.SetSizeSquare(0, GetRectTracker);
+  VertexList.SetSizeSquare(4, GetRectTracker, 1);
   SetTrackPos;
 end;
 
@@ -310,18 +319,8 @@ end;
 
 procedure TGUITrackBar.SetTrackPos;
 begin
-  case FOrient of
-    goHorizontal:
-    begin
-      VertexList.SetVertexPosSquare(8, 1, 1, FTrackPos, Rect.Height - 2);
-      VertexList.SetVertexPosSquare(12, FTrackPos, 0, FTrackWidth, Rect.Height);
-    end;
-    goVertical:
-    begin
-      VertexList.SetVertexPosSquare(8, 1, FTrackPos, Rect.Width - 2, Rect.Height - 1 - FTrackPos);
-      VertexList.SetVertexPosSquare(12, 0, FTrackPos, Rect.Width, FTrackWidth);
-    end;
-  end;
+  VertexList.SetRectSquare(8 , GetRectOffset, 1);
+  VertexList.SetRectSquare(12, GetRectTrack);
 end;
 
 procedure TGUITrackBar.SetTrackWidth(pValue: Integer);

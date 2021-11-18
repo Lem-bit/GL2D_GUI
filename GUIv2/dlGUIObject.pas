@@ -18,8 +18,8 @@ uses RTTI, Classes, Graphics, SysUtils, dlOpenGL, dlGUITypes, dlGUIFont, dlGUIVe
 }
 
 //Сообщения GUI компонентам
- const MSG_FORM_INSERTOBJ   = 2; //Добавлен компонент на форму
-       MSG_CHNG_RADIOBUTTON = 3; //Изменилось состояние RadioButton
+ const MSG_FORM_ADDCOMPONENT = 1; //
+       MSG_CHNG_RADIOBUTTON  = 2; //Изменилось состояние RadioButton
 
  type
    //Компоненты
@@ -58,8 +58,11 @@ type
 
    //Сообщения что то наподобие Windows.TMessage
    TGUIMessage = record
-     Msg    : Integer;    //Сообщение GUI_WM_USER например
-     Self   : TGUIObject; //Текущий объект
+     public
+       Msg    : Integer; //Сообщение GUI_WM_USER например
+       Sender : TObject; //Текущий объект
+     public
+       function Make(const AMessage: Integer; ASender: TObject): TGUIMessage;
    end;
 
    TGUIActionSetter = (
@@ -70,10 +73,35 @@ type
                         goaItemSelect,          //Выбрали элемент (у ListBox например)
                         goaItemClick,           //Нажали на элемент
                         goaWhell,               //Сработала прокрутка
-                        goaUpdateSize           //Поменялись размеры
+                        goaUpdateSize,          //Поменялись размеры
+                        goaAlignRect,           //Изменяем размеры компонента по Align
+                        goaKeyDown              //Нажали на кнопку
                       );
 
    TGUIObjectAction = Set of TGUIActionSetter;
+   TGUIObjectAlign = (
+     alCustom, //Определено Rect
+     alLeft,   //Прилипание к левому краю
+     alRight,  //Прилипание к правому краю
+     alClient, //Растянуто по всей форме
+     alTop,    //Прилипание к верхней части
+     alBottom  //Прилипание к нижней части
+   );
+
+   //При изменениях размеров формы только в режиме Align = Custom
+   TGUIObjectAnchors = (
+     anLeft,
+     anTop,
+     anRight,
+     anBottom
+   );
+   TGUIObjectAnchorsSet = set of TGUIObjectAnchors;
+
+   TGUIRenderProp = (
+     rpSkipScissor, //Не обрезать компонент по форме
+     rpRenderLast   //Прорисовывать когда компонент активный самым последним
+   );
+   TGUIRenderProps = set of TGUIRenderProp;
 
    //Прозрачность объекта
    TGUIObjectAlpha = class(TPersistent)
@@ -127,8 +155,10 @@ type
        FDefName     : String; //Имя данное автоматически (для подставки ID, SetID())
        FType        : TGUITypeComponent; //Тип компонента
      protected
-       FUID         : Integer; //Номер объекта в листе
+       FGUID        : String; //Номер объекта в листе
        FRect        : TGUIObjectRect; //Позиция и размеры
+       FAlign       : TGUIObjectAlign; //Положение на форме
+       FAnchors     : TGUIObjectAnchorsSet; //Закрепление позиции на форме (края)
        FTextOffset  : TGUIObjectRect; //Положение текста
        FHide        : Boolean; //Видимость
        FEnable      : Boolean; //Активный компонент или нет
@@ -136,6 +166,7 @@ type
        FHint        : TGUIHintObject; //Всплывающая подсказка
        FTextureInfo : TGUITextureInfo; //Информация о размерах текстуры
        FShowOnTop   : Boolean; //При фокусе переместить объект в самый конец списка (для ComboBox например)
+       FRenderProps : TGUIRenderProps; //Какие то доп опции для рендеринга
      private
        FTextureLink : TTextureLink;
      protected
@@ -161,7 +192,7 @@ type
        procedure SetScale(pScale: TFloat); virtual; //Установить размер
        procedure SetWidth(pWidth: Integer); //Установить ширину компонента
        procedure SetHeight(pHeight: Integer); //Установить высоту компонента
-       procedure SetResize; virtual; //Вызывается в SetWidth, SetHeight при изменении размера
+       procedure SetResize; virtual; {SetChangeRect} //Вызывается в SetWidth, SetHeight при изменении размера
        procedure SetHide(pHide: Boolean); virtual;
        procedure SetEnable(pEnable: Boolean); virtual;
        procedure SetColor(pColor: TColor); virtual;
@@ -170,13 +201,14 @@ type
        function GetColor: TColor;
        function GetTextureLinkName: String;
        function GetAttrFocused: Boolean;
-       procedure SetID(pID: Integer);
+       procedure SetGUID(pGUID: String);
        function GetPopupMenuName: String;
        procedure ChangeTextureInfo;
      public
        //Управление FAction
        procedure SetAction(pAction: TGUIObjectAction);
        procedure RemoveAction(pAction: TGUIObjectAction);
+       procedure ClearAction;
        function GetAction: TGUIObjectAction;
        function ObjectInAction(pAction: array of TGUIActionSetter; pCheckOr: Boolean = True): Boolean;
      public
@@ -191,14 +223,18 @@ type
        //Установить позицию компонента
        procedure SetPos(pX, pY: Integer);
        //Установить размеры компонента
-       procedure SetRect(pX, pY, pW, pH: Integer);
+       procedure SetSize(pWidth, pHeight: Integer);
+       //Установить размеры компонента
+       procedure SetRect(pX, pY, pW, pH: Integer); overload;
+       procedure SetRect(pRect: TGUIObjectRect); overload;
        //Получить какой то другой активный popup например у ListBox
        function GetChildItemPopup: TGUIObject; virtual;
        //Вызвать SetFontEvent, SetResize
        procedure ProcessEvents;
+       procedure OnResize;
      public
        property VertexList   : TGUIVertexList    read FVertexList;
-       property ID           : Integer           read FUID                write SetID;
+       property GUID         : String            read FGUID               write SetGUID;
        property TextRect     : TGUIObjectRect    read FTextOffset         write FTextOffset;
        property Focused      : Boolean           read GetAttrFocused;
        property ShowOnTop    : Boolean           read FShowOnTop;
@@ -214,20 +250,23 @@ type
      public
        [TXMLSerial] property Name: String read FName;
      public
-       property Rect         : TGUIObjectRect    read FRect;
-       property ObjectName   : String            read FDefName;
-       property ObjectType   : TGUITypeComponent read FType;
-       property Color        : TColor            read GetColor            write SetColor;
-       property Hide         : Boolean           read FHide               write SetHide;
-       property Enable       : Boolean           read FEnable             write SetEnable;
-       property TextureName  : String            read GetTextureLinkName;
-       property Font         : TGUIFont          read FFont               write SetFontLink;
-       property PopupMenu    : TGUIObject        read FPopupMenu          write SetPopupMenu;
-       property Parent       : TGUIObject        read FParent             write FParent;
-       property Scale        : TFloat            read FScale              write SetScale;
-       property Hint         : TGUIHintObject    read FHint               write FHint;
-       property Blend        : TBlendParam       read FBlend              write FBlend;
-       property Area         : TGUITypeArea      read FArea               write FArea;
+       property Rect         : TGUIObjectRect       read FRect;
+       property ObjectName   : String               read FDefName;
+       property ObjectType   : TGUITypeComponent    read FType;
+       property Color        : TColor               read GetColor            write SetColor;
+       property Hide         : Boolean              read FHide               write SetHide;
+       property Enable       : Boolean              read FEnable             write SetEnable;
+       property TextureName  : String               read GetTextureLinkName;
+       property Font         : TGUIFont             read FFont               write SetFontLink;
+       property PopupMenu    : TGUIObject           read FPopupMenu          write SetPopupMenu;
+       property Parent       : TGUIObject           read FParent             write FParent;
+       property Scale        : TFloat               read FScale              write SetScale;
+       property Hint         : TGUIHintObject       read FHint               write FHint;
+       property Blend        : TBlendParam          read FBlend              write FBlend;
+       property Area         : TGUITypeArea         read FArea               write FArea;
+       property Align        : TGUIObjectAlign      read FAlign              write FAlign;
+       property Anchors      : TGUIObjectAnchorsSet read FAnchors            write FAnchors;
+       property RenderProps  : TGUIRenderProps      read FRenderProps        write FRenderProps;
      public
        constructor Create(pName: String = ''; pType: TGUITypeComponent = gtcObject);
        destructor Destroy; override;
@@ -270,7 +309,7 @@ type
        //Прорисовка текста
        procedure RenderText; virtual;
      public
-       procedure SendGUIMessage(pMessage: TGUIMessage); virtual;
+       procedure BroadcastMessage(pMessage: TGUIMessage); virtual;
    end;
 
 implementation
@@ -288,6 +327,11 @@ begin
   SetAction([goaTextureNeedRecalc]);
 end;
 
+procedure TGUIObject.ClearAction;
+begin
+  FAction:= [];
+end;
+
 constructor TGUIObject.Create(pName: String = ''; pType: TGUITypeComponent = gtcObject);
 begin
   FDefName      := TGUITypeDefNames[pType].Name;
@@ -298,8 +342,10 @@ begin
     FName:= FDefName;
 
   FType         := pType;
-  FUID          := -1;
+  FGUID         := '';
   FRect.SetRect(0, 0, 0, 0);
+  FAlign        := alCustom;
+  FAnchors      := [anLeft, anTop];
   FTextOffset.SetRect(0, 0, 0, 0);
   FShowOnTop    := False;
   FHide         := False;
@@ -322,6 +368,7 @@ end;
 
 destructor TGUIObject.Destroy;
 begin
+  FreeAndNil(FPopupMenu);
   FreeAndNil(FVertexList);
   FreeAndNil(FFont);
   FreeAndNil(FBlend);
@@ -331,7 +378,7 @@ begin
 //  FreeAndNil(FTextureLink); не нужно
 end;
 
-procedure TGUIObject.SendGUIMessage(pMessage: TGUIMessage);
+procedure TGUIObject.BroadcastMessage(pMessage: TGUIMessage);
 begin
 
 end;
@@ -440,6 +487,9 @@ begin
   if Assigned(FArea) then
   begin
     SetAreaResize;
+    //т.к. у нас уже объект сдвинут glTranslatef то нужно отнять координаты объекта
+    //иначе area сдвинется
+    FArea.Rect.SetPos( FArea.Rect.X - Rect.X, FArea.Rect.Y - Rect.Y );
     FArea.Render;
   end;
 end;
@@ -457,6 +507,8 @@ end;
 procedure TGUIObject.OnKeyDown(var Key: Word; Shift: TShiftState);
 begin
   if Hide then Exit;
+
+  SetAction([goaKeyDown]);
 end;
 
 procedure TGUIObject.OnKeyPress(Key: Char);
@@ -467,6 +519,8 @@ end;
 procedure TGUIObject.OnKeyUp(var Key: Word; Shift: TShiftState);
 begin
   if Hide then Exit;
+
+  RemoveAction([goaKeyDown]);
 end;
 
 procedure TGUIObject.OnMouseDoubleClick(pX, pY: Integer; Button: TGUIMouseButton);
@@ -476,13 +530,10 @@ end;
 
 procedure TGUIObject.OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton);
 begin
-  if Hide then
-    Exit;
+  if Hide then Exit;
 
-  if not OnHit(pX, pY) then
-    Exit;
-
-  SetAction([goaDown]);
+  if OnHit(pX, pY) then
+    SetAction([goaDown, goaFocused]);
 end;
 
 procedure TGUIObject.OnMouseMove(pX, pY: Integer);
@@ -527,6 +578,11 @@ begin
     Exit;
 end;
 
+procedure TGUIObject.OnResize;
+begin
+  SetResize;
+end;
+
 procedure TGUIObject.OutHit(pX, pY: Integer);
 begin
   RemoveAction([goaDown, goaFocused]);
@@ -569,7 +625,13 @@ begin
   //Смешивание цветов
   Blend.Bind;
 
+  if rpSkipScissor in FRenderProps then
+    glDisable(GL_SCISSOR_TEST);
+
   glPushMatrix;
+    //Можно сделать glTranslatef(0, 0, 0) и указывать позиию в Rect
+    //Но тогда прийдется при перемещении объекта каждый раз пересчитывать все
+    //вершины т.к. там позиция не меняется
     glTranslatef(FRect.X, FRect.Y, 0);
     glScalef(FScale, FScale, FScale);
 
@@ -597,7 +659,6 @@ begin
           Continue;
         end;
 
-        //Если цвет не меняется ОТКЛЮЧИ текстуру !!!
         glColor4f   (Item.Color.R, Item.Color.G, Item.Color.B, Blend.Alpha);
         glTexCoord2f(Item.TexCoord.UCalc, Item.TexCoord.VCalc);
         glVertex2f  (Item.Vertex.X, Item.Vertex.Y);
@@ -610,7 +671,6 @@ begin
 
     //Удалим флаг что нужно пересчитывать текстурные координаты
     RemoveAction([goaTextureNeedRecalc]);
-
     AfterObjRender;
 
     glDisable(GL_BLEND);
@@ -641,8 +701,10 @@ end;
 
 procedure TGUIObject.SetAreaResize;
 begin
-  if Assigned(FArea) then
-    FArea.Rect.SetRect(0, 0, Width, Height);
+  if not Assigned(FArea) then
+    Exit;
+
+  FArea.Rect.SetRect(Rect);
 end;
 
 procedure TGUIObject.SetColor(pColor: TColor);
@@ -711,6 +773,11 @@ begin
   SetResize;
 end;
 
+procedure TGUIObject.SetRect(pRect: TGUIObjectRect);
+begin
+  SetRect(pRect.X, pRect.Y, pRect.Width, pRect.Height);
+end;
+
 procedure TGUIObject.SetResize;
 begin
 end;
@@ -718,6 +785,12 @@ end;
 procedure TGUIObject.SetScale(pScale: TFloat);
 begin
   FScale:= pScale;
+end;
+
+procedure TGUIObject.SetSize(pWidth, pHeight: Integer);
+begin
+  FRect.SetSize(pWidth, pHeight);
+  SetResize;
 end;
 
 procedure TGUIObject.SetWidth(pWidth: Integer);
@@ -741,12 +814,13 @@ end;
 procedure TGUIObject.SetHide(pHide: Boolean);
 begin
   FHide:= pHide;
+  RemoveAction([goaFocused, goaDown]);
 end;
 
-procedure TGUIObject.SetID(pID: Integer);
+procedure TGUIObject.SetGUID(pGUID: String);
 begin
-  if FUID <> -1 then
-    FUID:= pID;
+  if Trim(FGUID) = '' then
+    FGUID:= pGUID;
 end;
 
 { TGUIObjectAlpha }
@@ -799,6 +873,15 @@ end;
 procedure TGUIHintObject.SetText(pText: String);
 begin
   FText:= pText;
+end;
+
+{ TGUIMessage }
+
+function TGUIMessage.Make(const AMessage: Integer; ASender: TObject): TGUIMessage;
+begin
+  Msg   := AMessage;
+  Sender:= ASender;
+  Result:= Self;
 end;
 
 end.

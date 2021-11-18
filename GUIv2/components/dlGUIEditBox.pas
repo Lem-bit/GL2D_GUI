@@ -166,7 +166,7 @@ begin
   for i := 1 to Length(FDrawText) do
   begin
     BPos:= BPos + Font.GetTextWidth(FDrawText[i]);
-    if BPos > (pCoord - X) then
+    if BPos > (pCoord - X - FTextOffset.X) then
       Break;
   end;
 
@@ -180,6 +180,7 @@ begin
   FCursor   := TGUICursor.Create(clWhite);
   FSelection:= TGUIEditBoxSelection.Create(Self);
   SetRect(0, 0, 80, 20);
+  FTextOffset.X:= 2;
 
   FCursorWidth     := 1;
   FCursor.CharPos  := 1;
@@ -191,8 +192,9 @@ begin
 
   SetTextureLink(pTextureLink);
 
-  VertexList.MakeSquare(Rect.X, Rect.Y, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_Frame));
+  VertexList.MakeSquare(Rect, Color, GUIPalette.GetCellRect(pal_Frame));
   VertexList.MakeSquareOffset(0, 1, Color, GUIPalette.GetCellRect(pal_Window));
+
   UpdateCursorRect;
 end;
 
@@ -402,6 +404,9 @@ end;
 procedure TGUIEditBox.OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton);
 var Index: integer;
 begin
+  if not OnHit(pX, pY) then
+    Exit;
+
   inherited;
 
   //Показываем курсор
@@ -471,14 +476,7 @@ end;
 
 procedure TGUIEditBox.Render;
 begin
-
-  if FBorderStyle <> bsNone then
-    inherited
-  else
-  begin
-    AfterObjRender;
-    RenderText;
-  end;
+  inherited;
 
   if not (goaFocused in GetAction) then
     if FSelection.OnSelect then
@@ -512,7 +510,7 @@ begin
   if Font.Height > Height then
     Exit;
 
-  Font.Text(Rect.X + FTextOffset.X, Rect.Y + FTextOffset.Y, FDrawText, Width);
+  Font.Text(Rect.X + FTextOffset.X, Rect.Y + FTextOffset.Y, FDrawText, Width - FTextOffset.X);
 end;
 
 procedure TGUIEditBox.ResetCursor;
@@ -537,18 +535,15 @@ begin
                 //Устанавливаем текстурные координаты
                 VertexList.SetVertexTextureOne(0, 0);
               end;
-
     bsNone, bsSingle:
               begin
                 //Переводим метод прорисовки в GL_QUADS (по умолчанию у TGUIObject)
                 FModeDraw:= GL_QUADS;
                 //
-                VertexList.SetVertexShowInList(true, [-1]);
+                VertexList.SetVertexShowInList(FBorderStyle = bsSingle, []);
                 //
-                VertexList.Vertex[3].GapOccur:= False;
-                //
-                VertexList.SetVertexTextureMap(0, GUIPalette.GetCellRect(5));
-                VertexList.SetVertexTextureMap(4, GUIPalette.GetCellRect(4));
+                VertexList.SetVertexTextureMap(0, GUIPalette.GetCellRect(pal_Frame));
+                VertexList.SetVertexTextureMap(4, GUIPalette.GetCellRect(pal_Window));
               end;
 
   end;
@@ -582,7 +577,7 @@ begin
     Exit;
   end;
 
-  FCursor.RenderPos:= Font.GetTextWidth(Copy(FText, FOffsetX + 1, FCursor.CharPos - 1));
+  FCursor.RenderPos:= Font.GetTextWidth(Copy(FText, FOffsetX + 1, FCursor.CharPos - 1)) + FTextOffset.X;
   FCursor.ResetCursor;
 
   //Зашли за границу
@@ -622,8 +617,8 @@ end;
 
 procedure TGUIEditBox.SetResize;
 begin
-  VertexList.SetVertexPosSquare(0, 0, 0, Width, Rect.Height);
-  VertexList.SetVertexPosSquare(4, 1, 1, Width - 2, Rect.Height - 2);
+  VertexList.SetSizeSquare(0, Rect);
+  VertexList.SetSizeSquare(4, Rect, 1);
   UpdateCursorRect;
 end;
 
@@ -656,6 +651,8 @@ begin
 
   Parent:= TGUIEditBox(FParent);
   FRect.SetRect(Parent.Rect);
+  FRect.Y     := FRect.Y + 1;
+  FRect.Height:= FRect.Height - 2;
 
   FCurrSEPos[START_POS]:= SelStart + StartOffset;
   FCurrSEPos[END_POS  ]:= SelEnd - FCurrSEPos[START_POS];
@@ -689,8 +686,10 @@ begin
   else
     FRect.X:= Parent.Rect.X + SX;
 
-  if SX + EX > Parent.Rect.Width then
-    FRect.Width:= Parent.Rect.Width - SX
+  FRect.X:= FRect.X + Parent.TextRect.X;
+
+  if SX + EX + Parent.TextRect.X > Parent.Rect.Width then
+    FRect.Width:= Parent.Rect.Width - SX - Parent.TextRect.X
   else
     FRect.Width:= EX;
 
@@ -748,9 +747,8 @@ begin
     Exit;
 
   FBlend.Bind;
-  TGLColor.glColor3fx($00333333);
   FRect.SetRect(FRect);
-  FRect.Render(0, GL_QUADS);
+  FRect.Render(0, GL_QUADS, $00333333);
 end;
 
 procedure TGUIEditBoxSelection.ResetUpdate;

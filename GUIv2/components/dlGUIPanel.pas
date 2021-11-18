@@ -23,7 +23,6 @@ type
       FBorder: Integer;
     strict private
       procedure SetBorder(value: Integer);
-      procedure ResizeBorder;
     protected
       procedure SetResize; override;
     public
@@ -39,20 +38,14 @@ implementation
 constructor TGUIPanel.Create(pName: String = ''; pTextureLink: TTextureLink = nil);
 begin
   inherited Create(pName, gtcObject);
-
   SetRect(0, 0, 200, 200);
 
   SetTextureLink(pTextureLink);
 
   FBorder:= 1;
 
-  VertexList.MakeSquare(Rect.X, Rect.Y, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_6));
-  VertexList.MakeSquare(FBorder, FBorder, Width - (FBorder * 2), Height - (FBorder * 2), Color, GUIPalette.GetCellRect(pal_Window));
-end;
-
-procedure TGUIPanel.ResizeBorder;
-begin
-  VertexList.SetVertexPosSquare(4, FBorder, FBorder, Rect.Width - (FBorder * 2), Rect.Height - (FBorder * 2));
+  VertexList.MakeSquare(Rect, Color, GUIPalette.GetCellRect(pal_Frame));
+  VertexList.MakeSquareOffset(0, FBorder, Color, GUIPalette.GetCellRect(pal_Window));
 end;
 
 procedure TGUIPanel.SetBorder(value: Integer);
@@ -61,13 +54,13 @@ begin
   if FBorder < 0 then
     FBorder:= 0;
 
-  ResizeBorder;
+  SetResize;
 end;
 
 procedure TGUIPanel.SetResize;
 begin
-  VertexList.SetVertexPosSquare(0, 0, 0, Width, Height);
-  ResizeBorder;
+  VertexList.SetSizeSquare(0, Rect);
+  VertexList.SetSizeSquare(4, Rect, FBorder);
 end;
 
 end.

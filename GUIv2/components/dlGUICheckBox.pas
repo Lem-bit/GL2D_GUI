@@ -21,8 +21,11 @@ interface
      strict private
        FChecked: Boolean;
        FText   : String;
+     strict private
+       function GetRectCheckBox: TGUIObjectRect;
      protected
        procedure SetAreaResize; override;
+       procedure SetResize; override;
        procedure SetFontEvent; override; //Событие при создании шрифта
        procedure SetText(AValue: String);
      public
@@ -43,26 +46,27 @@ implementation
 { TGUICheckBox }
 
 constructor TGUICheckBox.Create(pName: String = ''; pTextureLink: TTextureLink = nil);
+var ARect: TGUIObjectRect;
 begin
   inherited Create(pName, gtcCheckBox);
   SetRect(0, 0, 100, CHECKBOX_SIZE);
 
   FText    := '';
   Area.Show:= True;
+  Area.Color.SetColor(clGray);
 
   FTextOffset.SetRect(CHECKBOX_SIZE + 4, 0, 0, 0);
   SetTextureLink(pTextureLink);
 
   //Основная часть
-  VertexList.MakeSquare(0, 0, CHECKBOX_SIZE, CHECKBOX_SIZE, Color,
-    GUIPalette.GetCellRect(pal_CheckBox_uc), GROUP_UNCHECKED);
-  VertexList.MakeSquare(0, 0, CHECKBOX_SIZE, CHECKBOX_SIZE, Color,
-    GUIPalette.GetCellRect(pal_CheckBox_ch), GROUP_CHECKED, True);
+  ARect:= GetRectCheckBox;
+  VertexList.MakeSquare(ARect, Color, GUIPalette.GetCellRect(pal_CheckBox_uc), GROUP_UNCHECKED);
+  VertexList.MakeSquare(ARect, Color, GUIPalette.GetCellRect(pal_CheckBox_ch), GROUP_CHECKED, True);
 end;
 
 procedure TGUICheckBox.SetAreaResize;
 begin
-  Area.Rect.SetRect(1, 0, CHECKBOX_SIZE - 1, CHECKBOX_SIZE - 1);
+  Area.Rect.SetRect(GetRectCheckBox);
 end;
 
 procedure TGUICheckBox.SetFontEvent;
@@ -73,9 +77,22 @@ begin
   Width:= Round(Font.GetTextWidth(FText)) + CHECKBOX_SIZE + 4;
 end;
 
+procedure TGUICheckBox.SetResize;
+var ARect: TGUIObjectRect;
+begin
+  ARect:= GetRectCheckBox;
+  VertexList.SetSizeSquare(0, ARect);
+  VertexList.SetSizeSquare(4, ARect);
+end;
+
 procedure TGUICheckBox.SetText(AValue: String);
 begin
   FText:= AValue;
+end;
+
+function TGUICheckBox.GetRectCheckBox: TGUIObjectRect;
+begin
+  Result.SetRect(Rect.X, Rect.Y, CHECKBOX_SIZE, CHECKBOX_SIZE);
 end;
 
 procedure TGUICheckBox.OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton);

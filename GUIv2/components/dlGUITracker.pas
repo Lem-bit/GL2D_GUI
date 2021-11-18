@@ -106,7 +106,7 @@ type
     protected
       function GetHorizTracker: TGUITracker;
       function GetVertTracker: TGUITracker;
-    protected
+    public
       property HTracker: TGUITracker read GetHorizTracker;
       property VTracker: TGUITracker read GetVertTracker;
     protected
@@ -311,7 +311,6 @@ var i: integer;
     imgOff: integer;
 begin
   inherited Create;
-
   SetRect(pLeft, pTop, pWidth, pHeight);
 
   FStyle    := pTrackerStyle;
@@ -362,7 +361,7 @@ begin
   FTrack.Area.Show:= False;
 
   //Область трекера + кнопок
-  VertexList.MakeSquare(0, 0, Rect.Width, Rect.Height, Color, GUIPalette.GetCellRect(pal_Window));
+  VertexList.MakeSquare(Rect, Color, GUIPalette.GetCellRect(pal_Window));
 end;
 
 destructor TGUITracker.Destroy;
@@ -511,7 +510,7 @@ end;
 
 procedure TGUITracker.SetResize;
 begin
-  VertexList.SetVertexPosSquare(0, 0, 0, Rect.Width, Rect.Height);
+  VertexList.SetSizeSquare(0, Rect);
 
   if Assigned(FButton[BTN_UPL]) then
     FButton[BTN_UPL].SetRect(GetObjPosX(BTN_UPL), GetObjPosY(BTN_UPL), FSize, FSize);
@@ -575,6 +574,7 @@ begin
       end;
 
       FTrack.Y:= pValue;
+      FTrack.ProcessEvents;
     end;
 
     goHorizontal:
@@ -596,6 +596,7 @@ begin
       end;
 
       FTrack.X:= pValue;
+      FTrack.ProcessEvents;
     end;
   end;
 
