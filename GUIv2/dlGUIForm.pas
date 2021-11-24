@@ -3,7 +3,7 @@
 interface
 
 uses Classes, SysUtils, Windows, Graphics, dlGUITypes, dlGUIObject, dlGUIPaletteHelper, dlOpenGL,
-  dlGUIButton, dlGUIPopupMenu, dlGUIFont;
+  dlGUIButton, dlGUIPopupMenu, dlGUIFont, dlGUIXmlSerial;
 
 const MOUSE_AREA = 20; //Для Hint
 
@@ -82,7 +82,6 @@ type
       FCaption    : String;  //Название формы
       FMinimize   : Boolean; //Форма свернута
       FIndex      : Integer; //Текущий индекс компонента
-      FComponent  : TList;   //Компоненты
       FOffsetY    : Integer; //Для сдвига компонентов когда отображается Caption
 
       FDownAction : TGUIActionItem; //На что нажали мышью
@@ -97,7 +96,11 @@ type
 
       FViewPort   : array[0..3] of Integer;
       FProps      : TGUIFormProp;
+
+      [TXMLSerial] FComponent: TList;   //Компоненты
     strict private
+      procedure ShowHint(AComp: TGUIObject; AmP: TCoord2DI);
+
       procedure GetCurrentViewPort;
       procedure SetPosButtons;
       function CurrOnHit(pRect: TGUIObjectRect; pX, pY: Integer): Boolean;
@@ -128,6 +131,9 @@ type
       function IsAssigned: Boolean;
 
       procedure ComponentAlignment(AOffsetRect: TGUIObjectRect);
+
+      //Вычислить текущую позицию мыши на форме
+      function GetCorrPos(pX, pY: Integer): TCoord2DI;
     protected
       procedure SetResize; override;
       procedure SetFontEvent; override;
@@ -165,11 +171,23 @@ type
       function DelComponent(pComponent: TGUIObject): Boolean;
       procedure ProcessEvents;
     public
+      [TXMLSerial] property Caption: String                  read FCaption     write FCaption;
+      [TXMLSerial] property BorderStyle: TGUIFormBorderStyle read FBorderStyle write SetBorderStyle;
+      [TXMLSerial] property Minimize: Boolean                read FMinimize    write SetMinimize;
+      [TXMLSerial] property Rect;
+      [TXMLSerial] property Name;
+      [TXMLSerial] property Color;
+      [TXMLSerial] property Hide;
+      [TXMLSerial] property Enable;
+      [TXMLSerial] property TextureName;
+      [TXMLSerial] property Font;
+      [TXMLSerial] property Parent;
+      [TXMLSerial] property Hint;
+      [TXMLSerial] property Blend;
+    public
       property ComponentName[index: string]: TGUIObject read GetComponentByStr;
       property Component[index: integer]: TGUIObject    read GetComponentByIndex;
-      property Minimize: Boolean                        read FMinimize            write SetMinimize;
-      property Caption: String                          read FCaption             write FCaption;
-      property BorderStyle: TGUIFormBorderStyle         read FBorderStyle         write SetBorderStyle;
+
       property ButtonMinimize: TGUIButton               read FBtnMinimize;
       property ButtonHide: TGUIButton                   read FBtnHide;
     public
@@ -182,6 +200,22 @@ type
 implementation
 
 { TGUIForm }
+
+procedure TGUIForm.ShowHint(AComp: TGUIObject; AmP: TCoord2DI);
+begin
+  if AComp.Hint.Text = '' then
+  begin
+    FHint.Hide:= True;
+    Exit;
+  end;
+
+  FHint.Color     := AComp.Hint.BackgroundColor;
+  FHint.Text      := AComp.Hint.Text;
+  FHint.Font.Color:= AComp.Hint.Color;
+  FHint.Rect.SetPos(AmP.X + MOUSE_AREA, Amp.Y + MOUSE_AREA);
+  FHint.SetViewPort(FViewPort[2] - Rect.X, FViewPort[3] - Rect.Y - FOffsetY);
+  FHint.Hide := False;
+end;
 
 procedure TGUIForm.MakeButton(var pButton: TGUIButton; pProc: TGUIProc; pImage, pImageDown: Integer);
 begin
@@ -242,13 +276,13 @@ begin
 
   glPushMatrix;
   FormRect:= GetRectForm;
-  glEnable(GL_SCISSOR_TEST);
   glScissor(FormRect.X, FViewPort[3] - FormRect.Height - FormRect.Y + 1, FormRect.Width, FormRect.Height); // От левого нижнего угла
   glTranslatef(0, FOffsetY, 0);
 
   if Assigned(FComponent) then
     for i := 0 to FComponent.Count - 1 do
     begin
+      glEnable(GL_SCISSOR_TEST);
       Comp:= TGUIObject(FComponent[i]);
 
       //Компонент с отложенной отрисовкой
@@ -264,8 +298,8 @@ begin
     if rpRenderLast in FFocused.Comp.RenderProps then
       FFocused.Comp.Render;
 
-  glPopMatrix;
   glDisable(GL_SCISSOR_TEST);
+  glPopMatrix;
 
   //Отображаем PopupMenu
   if Assigned(FActivePopup) then
@@ -411,6 +445,12 @@ begin
     Exit;
 
   Result:= TGUIObject(FComponent[i]);
+end;
+
+function TGUIForm.GetCorrPos(pX, pY: Integer): TCoord2DI;
+begin
+  Result.X:= pX - Rect.X;
+  Result.Y:= pY - Rect.Y - FOffsetY;
 end;
 
 procedure TGUIForm.GetCurrentViewPort;
@@ -561,7 +601,7 @@ begin
 end;
 
 function TGUIForm.OnHitByComponent(pX, pY: Integer): Boolean;
-var Cx, Cy: integer;
+var mP: TCoord2DI;
 begin
   Result:= OnHit(pX, pY);
   if Result then
@@ -570,10 +610,8 @@ begin
   if not FFocused.IsAssigned then
     Exit;
 
-  Cx:= pX - Rect.X;
-  Cy:= pY - Rect.Y - FOffsetY;
-
-  Result:= FFocused.Comp.OnHit(Cx, Cy);
+  mP:= GetCorrPos(pX, pY);
+  Result:= FFocused.Comp.OnHit(mP.X, mP.Y);
 
   if Result then
     Exit;
@@ -622,8 +660,16 @@ begin
   if not FFocused.IsAssigned then
     Exit;
 
+  //Не попали по форме (проверим на skipscissor)
+  if FDownAction <> aiForm then
+    if not (rpSkipScissor in FFocused.Comp.RenderProps) then
+      Exit;
+
   if not FFocused.Comp.OnHit(pCx, pCy) then
+  begin
+    FFocused.Comp.OutHit(pCx, pCy);
     Exit;
+  end;
 
   FFocused.Comp.BeforeOnMouseDown(pCx, pCy, pButton);
 
@@ -639,26 +685,25 @@ begin
     Result:= True;
 end;
 
-var Cx, Cy: Integer;
-    i: integer;
+var i: integer;
     Comp: TGUIObject;
     FProc: Boolean;
+    mP: TCoord2DI;
 begin
 
   //Для заполнения FDownAction
   OnHit(pX, pY);
 
-  Cx:= pX - Rect.X;
-  Cy:= pY - Rect.Y - FOffsetY;
+  mP:= GetCorrPos(pX, pY);
 
   //Нажали на Popup
   if FDownAction = aiPopup then
   begin
-    ShowPopupMenu(FActivePopup, Cx, Cy + FOffsetY, Button);
+    ShowPopupMenu(FActivePopup, mP.X, mP.Y + FOffsetY, Button);
     Exit;
   end;
 
-  FProc:= FocusedMouseDown(Cx, Cy, Button);
+  FProc:= FocusedMouseDown(mP.X, mP.Y, Button);
 
   case FDownAction of
     aiNone: begin
@@ -683,14 +728,14 @@ begin
             Continue;
 
           //Если нажали не на компонент
-          if not Comp.OnHit(Cx, Cy) then
+          if not Comp.OnHit(mP.X, mP.Y) then
           begin
-            Comp.OutHit(Cx, Cy);
+            Comp.OutHit(mP.X, mP.Y);
             Continue;
           end;
 
           //Передадим на событие до появления меню например для изменения имени пункта меню
-          Comp.BeforeOnMouseDown(Cx, Cy, Button);
+          Comp.BeforeOnMouseDown(mP.X, mP.Y, Button);
 
           //Если было до этого раскрыто какое то PopupMenu то скроем его
           FreeActivePopup;
@@ -702,11 +747,11 @@ begin
           if not Assigned(FActivePopup) then
             FActivePopup:= TGUIPopupMenu(Comp.GetChildItemPopup);
 
-          Comp.OnMouseDown(Cx, Cy, Button);
+          Comp.OnMouseDown(mP.X, mP.Y, Button);
           FFocused.Comp:= Comp;
         end;
 
-      ShowPopupMenu(FActivePopup, Cx, Cy + FOffsetY, Button);
+      ShowPopupMenu(FActivePopup, mP.X, mP.Y + FOffsetY, Button);
 
     end;
 
@@ -736,10 +781,11 @@ begin
 end;
 
 procedure TGUIForm.OnMouseMove(pX, pY: Integer);
-var i     : integer;
-    Comp  : TGUIObject;
-    Cx, Cy: Integer;
-    ObjHit: Boolean;
+var i          : integer;
+    Comp       : TGUIObject;
+    mP         : TCoord2DI;
+    ObjHit     : Boolean;
+    MouseOnForm: Boolean;
 begin
   //Скрываем хинт если показан
   FHint.Hide:= True;
@@ -787,26 +833,28 @@ begin
   if Hide or Minimize then
     Exit;
 
-  Cx:= pX - Rect.X;
-  Cy:= pY - Rect.Y - FOffsetY;
+  mP:= GetCorrPos(pX, pY);
+  MouseOnForm:= CurrOnHit(GetRectForm, pX, pY);
 
   //Для элемента в фокусе всегда OnMouseMove (для TList) например
   //Если не скипается обрезка по форме
   if FFocused.IsAssigned then
-  begin
-    FFocused.Comp.OnMouseMove(Cx, Cy);
-    if FFocused.Comp.OnHit(Cx, Cy) then
+    if (MouseOnForm) or
+       (rpSkipScissor in FFocused.Comp.RenderProps) then
     begin
-      Cx:= 0;
-      Cy:= 0;
+      FFocused.Comp.OnMouseMove(mP.X, mP.Y);
+
+      if MouseOnForm then
+        ShowHint(FFocused.Comp, mP);
+
+      //Exit тут нельзя (нужно события отправить остальным компонентам)
+      if FFocused.Comp.OnHit(mP.X, mP.Y) then
+        mP.SetDefault;
     end;
-  end;
 
   //Когда изменяем размер окна
-  if pX > Rect.X + Rect.Width then
-    Cx:= 0;
-  if pY > Rect.Y + Rect.Height + FOffsetY then
-    Cy:= 0;
+  if not MouseOnForm then
+    mP.SetDefault;
 
   for i:= 0 to FComponent.Count - 1 do
   begin
@@ -815,7 +863,7 @@ begin
     if Comp = FFocused.Comp then
       Continue;
 
-    Comp.OnMouseMove(Cx, Cy);
+    Comp.OnMouseMove(mP.X, mP.Y);
 
     if not Comp.Hint.Enable then
       Continue;
@@ -832,52 +880,46 @@ begin
       Continue;
 
     //
-    if not Comp.OnHit(Cx, Cy) then
+    if not Comp.OnHit(mP.X, mP.Y) then
       Continue;
 
     ObjHit:= True;
 
-    //Обрабатываем хинт
-    FHint.Color:= Comp.Hint.BackgroundColor;
-    FHint.Text := Comp.Hint.Text;
-    FHint.Font.Color:= Comp.Hint.Color;
-    FHint.Rect.SetPos(Cx + MOUSE_AREA, Cy + MOUSE_AREA);
-    FHint.SetViewPort(FViewPort[2] - Rect.X, FViewPort[3] - Rect.Y - FOffsetY);
-    FHint.Hide := False;
+    //Показываем Hint
+    ShowHint(Comp, mP);
   end;
 end;
 
 procedure TGUIForm.OnMouseUp(pX, pY: Integer; Button: TGUIMouseButton);
 
-function FocusedMouseUp(pCx, pCy: Integer; pButton: TGUIMouseButton): Boolean;
-begin
-  Result:= False;
-  if not FFocused.IsAssigned then
-    Exit;
+  function FocusedMouseUp(pCx, pCy: Integer; pButton: TGUIMouseButton): Boolean;
+  begin
+    Result:= False;
+    if not FFocused.IsAssigned then
+      Exit;
 
-  FFocused.Comp.OnMouseUp(pCx, pCy, pButton);
-  if not (goaDown in FFocused.Comp.GetAction) then
-    Result:= True;
-end;
+    FFocused.Comp.OnMouseUp(pCx, pCy, pButton);
+    if not (goaDown in FFocused.Comp.GetAction) then
+      Result:= True;
+  end;
 
-var Cx, Cy: Integer;
+var mP: TCoord2DI;
 begin
   inherited;
 
-  Cx:= pX - Rect.X;
-  Cy:= pY - Rect.Y - FOffsetY;
-
-  FocusedMouseUp(Cx, Cy, Button);
+  mP:= GetCorrPos(pX, pY);
+  FocusedMouseUp(mP.X, mP.Y, Button);
 
   case FDownAction of
     aiPopup: begin
       if HasActivePopup then
-        FActivePopup.OnMouseUp(Cx, Cy + FOffsetY, Button);
+        FActivePopup.OnMouseUp(mP.X, mP.Y + FOffsetY, Button);
     end;
 
     aiNone: begin
       //
     end;
+
     aiCaption: begin
       if Assigned(FBtnMinimize) then
         FBtnMinimize.OnMouseUp(pX, pY, Button);

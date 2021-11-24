@@ -3,7 +3,7 @@
 interface
 
 uses Classes, SysUtils, dlGUITypes, dlGUIObject, dlGUIEditBox, dlGUIButton, dlGUIListBox, dlGUIPaletteHelper,
-  dlGUIXMLSerial;
+  dlGUIXMLSerial, dlOpenGL;
 
 {
   ====================================================
@@ -67,7 +67,9 @@ type
       function OnHit(pX, pY: Integer): Boolean; override;
       procedure OutHit(pX, pY: Integer); override;
       procedure OnMouseOver(pX, pY: Integer); override;
+      procedure OnDeactivate(Sender: TGUIObject); override;
 
+      procedure AfterObjRender; override;
       procedure Render; override;
       procedure RenderText; override;
     public
@@ -93,6 +95,13 @@ procedure TGUIComboBox.Add(const pText: String);
 begin
   if Assigned(FComponent.Items[Ord(TElement.eList)]) then
     FList.Add(pText);
+end;
+
+procedure TGUIComboBox.AfterObjRender;
+begin
+  glEnable(GL_SCISSOR_TEST);
+  inherited;
+  glDisable(GL_SCISSOR_TEST);
 end;
 
 procedure TGUIComboBox.BeforeOnMouseDown(pX, pY: Integer; Button: TGUIMouseButton);
@@ -144,7 +153,7 @@ begin
 
   FButtonSize:= Rect.Height;
   Area.Show  := True;
-  RenderProps:= [rpRenderLast];
+  RenderProps:= [rpSkipScissor, rpRenderLast];
 
   FComponent.Add(TGUIEditBox.Create('cbEdit' , pTextureLink));
   FComponent.Add(TGUIButton.Create('cbButton', pTextureLink));
@@ -281,6 +290,12 @@ begin
 
   //Фокус на лист
   FList.SetAction([goaFocused]);
+end;
+
+procedure TGUIComboBox.OnDeactivate(Sender: TGUIObject);
+begin
+  inherited;
+  OutHit(0, 0);
 end;
 
 procedure TGUIComboBox.OutHit(pX, pY: Integer);

@@ -36,6 +36,13 @@ type
     X, Y: integer;
   end;
 //===========================================
+  TCoord2DI = record
+    public
+      X, Y: Integer;
+    public
+      procedure SetDefault;
+  end;
+
 //Двумерные координаты
   TCoord2D = record
   public
@@ -1045,6 +1052,14 @@ begin
   G:= pG;
   B:= pB;
   A:= pA;
+end;
+
+{ TCoord2DI }
+
+procedure TCoord2DI.SetDefault;
+begin
+  X:= 0;
+  Y:= 0;
 end;
 
 end.
