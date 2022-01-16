@@ -122,7 +122,9 @@ Button.Draw;
 Поле ввода:
 ```pascal
 uses dlGUIEditBox;
-
+...
+var EditBox: TGUIEditBox;
+...
 EditBox:= TGUIEditBox.Create;
 EditBox.SetPos(10, 10, 200, 20);
 
