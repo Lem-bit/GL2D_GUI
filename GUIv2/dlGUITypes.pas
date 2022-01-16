@@ -29,50 +29,30 @@ type
 
 //Переназначение стандартных типов
 type
-  TFloat = single;
-  TUInt  = Cardinal;
-
   TMousePoint = record
     X, Y: integer;
   end;
 //===========================================
-  TCoord2DI = record
+  TCoord2Di = record
     public
       X, Y: Integer;
     public
+      procedure SetValue(pX, pY: Integer);
       procedure SetDefault;
   end;
 
 //Двумерные координаты
-  TCoord2D = record
+  TCoord2Df = record
   public
-    X, Y: TFloat;
+    X, Y: Single;
   public
-    procedure SetValue(pX, pY: TFloat);
+    procedure SetValue(pX, pY: Single);
+    procedure SetDefault;
     function ToString: String;
   end;
-
-  TCoord2DLine     = array[0..1] of TCoord2D;
-  TCoord2DTriangle = array[0..2] of TCoord2D;
-  TCoord2DSquare   = array[0..3] of TCoord2D;
-
-//Трехмерные координаты
-  TCoord3D = record
-  public
-    X, Y, Z: TFloat;
-  public
-    procedure CopyFrom(pObject: TCoord3D);
-    procedure glVertex3fx;
-    procedure SetValue(pX, pY, pZ: TFloat);
-    function ToString: String;
-  end;
-
-  TCoord3DLine     = array[0..1] of TCoord3D;
-  TCoord3DTriangle = array[0..2] of TCoord3D;
-  TCoord3DSquare   = array[0..3] of TCoord3D;
 
 //===========================================
-  TTexFormat = (tfRGB, tfRGBA, tfBGR, tfBGRA);
+  TTexFormat     = (tfRGB, tfRGBA, tfBGR, tfBGRA);
   TTexEnvMode    = (teReplace, teDecal, teModulate, teAdd, teAddSigned, teInterpolate, teSubtract, teDot3RGB, teDot3RGBA);
   TTexFilterType = (ftNearest, ftLinear, ftNearestMipmapNearest, ftLinearMipmapNearest, ftNearestMipmapLinear, ftLinearMipmapLinear);
 
@@ -80,18 +60,18 @@ type
   TTextureCoord = record
   private
     //Расчитанные координаты
-    FUCalc, FVCalc: TFloat;
+    FUCalc, FVCalc: Single;
   public
     //Координаты текстуры
-    U, V: TFloat;
+    U, V: Single;
   public
-    procedure SetValue(pU, pV: TFloat);
+    procedure SetValue(pU, pV: Single);
     function ToString: String;
   public
-    procedure SetCalculatedUV(pUCalc, pVCalc: TFloat);
+    procedure SetCalculatedUV(pUCalc, pVCalc: Single);
   public
-    property UCalc: TFloat read FUCalc;
-    property VCalc: TFloat read FVCalc;
+    property UCalc: Single read FUCalc;
+    property VCalc: Single read FVCalc;
   end;
 
   //Список координат для 4 вершин
@@ -99,8 +79,8 @@ type
     public
       Index: array[0..3] of TTextureCoord;
     public
-      procedure SetCoord(p1x, p1y, p2x, p2y, p3x, p3y, p4x, p4y: TFloat);
-      procedure SetSize(pW, pH: TFloat);
+      procedure SetCoord(p1x, p1y, p2x, p2y, p3x, p3y, p4x, p4y: Single);
+      procedure SetSize(pW, pH: Single);
   end;
 
   TTextureOffset = record
@@ -124,15 +104,15 @@ type
     private
       FWidth       : Integer;  //Ширина текстуры
       FHeight      : Integer;  //Высота текстуры
-      FLink        : TUInt;    //Ссылка на текстуру
+      FLink        : Cardinal; //Ссылка на текстуру
 
       FName        : String;   //Название текстуры
       FFileName    : String;   //Файл текстуры
       FEnable      : Boolean;  //Разрешить Bind или нет
 
-      FTFormat     : TUInt;    //Формат текстуры
-      FTEnvMode    : TUInt;    //Режим отображения текстуры
-      FTFilter     : TUInt;    //Фильтр текстуры
+      FTFormat     : Cardinal; //Формат текстуры
+      FTEnvMode    : Cardinal; //Режим отображения текстуры
+      FTFilter     : Cardinal; //Фильтр текстуры
 
       FRGBConvert  : Boolean;  //Текстура конвертированная RGB->RGBA
       FRGBMaskColor: TColor;   //Цвет маски
@@ -145,59 +125,63 @@ type
 
       function IsEmpty: Boolean;
     public
-      property Enable      : Boolean read FEnable       write FEnable;
+      property Enable      : Boolean  read FEnable       write FEnable;
 
-      property Width       : Integer read FWidth        write FWidth;
-      property Height      : Integer read FHeight       write FHeight;
-      property Link        : TUInt   read FLink         write FLink;
+      property Width       : Integer  read FWidth        write FWidth;
+      property Height      : Integer  read FHeight       write FHeight;
+      property Link        : Cardinal read FLink         write FLink;
 
-      property FileName    : String  read FFileName     write FFileName;
-      property p_Format    : TUInt   read FTFormat      write FTFormat;
-      property p_EnvMode   : TUInt   read FTEnvMode     write FTEnvMode;
-      property p_Filter    : TUInt   read FTFilter      write FTFilter;
-      property RGBConv     : Boolean read FRGBConvert   write FRGBConvert;
-      property RGBMaskColor: TColor  read FRGBMaskColor write FRGBMaskColor;
+      property FileName    : String   read FFileName     write FFileName;
+      property p_Format    : Cardinal read FTFormat      write FTFormat;
+      property p_EnvMode   : Cardinal read FTEnvMode     write FTEnvMode;
+      property p_Filter    : Cardinal read FTFilter      write FTFilter;
+      property RGBConv     : Boolean  read FRGBConvert   write FRGBConvert;
+      property RGBMaskColor: TColor   read FRGBMaskColor write FRGBMaskColor;
     published
-      property Name: String          read FName         write FName;
+      property Name        : String  read FName          write FName;
+    published
+      [TXMLSerial] property LinkName: String read FName write FName;
   end;
 
 //===========================================
 //Цвет
-  TGLColor4Arr = array[0..3] of TFloat;
-  TGLColor3Arr = array[0..2] of TFloat;
-
-  TGLColor = class;
+  TGLColor4Arr = array[0..3] of Single;
+  TGLColor3Arr = array[0..2] of Single;
+  TGLColor     = class;
 
   TGLColor3Rec  = record
     public
-      R, G, B: TFloat;
+      R, G, B: Single;
     public
       procedure BindColor;
-      procedure SetColor(pR, pG, pB: TFloat); overload;
+      procedure SetColor(pR, pG, pB: Single); overload;
+      procedure SetColor(pColor: TColor); overload;
       procedure SetColor(pColor: TGLColor); overload;
       procedure ClearColor;
   end;
 
   TGLColor4Rec = record
     public
-      R, G, B, A: TFloat;
+      R, G, B, A: Single;
     public
       procedure BindColor;
-      procedure SetColor(pR, pG, pB, pA: TFloat); overload;
+      procedure SetColor(pR, pG, pB, pA: Single); overload;
+      procedure SetColor(pColor: TColor); overload;
       procedure SetColor(pColor: TGLColor); overload;
+      procedure CopyFrom(AColor4Rec: TGLColor4Rec);
       procedure ClearColor;
   end;
 
   TGLColor = class
   public
-    R: TFloat;
-    G: TFloat;
-    B: TFloat;
-    A: TFloat;
+    R: Single;
+    G: Single;
+    B: Single;
+    A: Single;
   public
     constructor Create(pColor: TColor); overload;
-    constructor Create(pR, pG, pB: TFloat); overload;
-    constructor Create(pR, pG, pB, pA: TFloat); overload;
+    constructor Create(pR, pG, pB: Single); overload;
+    constructor Create(pR, pG, pB, pA: Single); overload;
     destructor Destroy; override;
 
     class procedure glColor3fx(pColor: Integer); overload;
@@ -209,15 +193,15 @@ type
     procedure glColor4fx; //Установить glColor3f(R, G, B, A);
     //
     //Получить среднее значение цвета
-    function GetMeanColor: TFloat;
+    function GetMeanColor: Single;
 
     //Это черный цвет
     function IsBlack: Boolean;
 
     //Сеттер и геттер текста
     procedure SetColor(pColor: TColor); overload;
-    procedure SetColor(pR, pG, pB: TFloat); overload;
-    procedure SetColor(pR, pG, pB, pA: TFloat); overload;
+    procedure SetColor(pR, pG, pB: Single); overload;
+    procedure SetColor(pR, pG, pB, pA: Single); overload;
 
     function GetColor: TColor; overload;
     function GetColor3: TGLColor3Arr; overload;
@@ -231,17 +215,17 @@ type
 //Точка (POINT) для построения всех объектов GUI
   TVertexClass = class
   public
-    Vertex    : TCoord2D;       //Координаты точки
+    Vertex    : TCoord2Df;      //Координаты точки
     TexCoord  : TTextureCoord;  //Текстурные координаты
     Color     : TGLColor;       //Цвет точки
     Hide      : Boolean;        //Скрывать вершину или нет
     Group     : Byte;           //Группа, для группового изменения состояния
     GapOccur  : Boolean;        //Разрыв на этой вершине (glBegin, glEnd) при прорисовке в режиме GL_LINE_LOOP
   public
-    constructor Create(pX, pY: TFloat; pColor: TColor = clWhite; pTU: TFloat = 0.0; pTV: TFloat = 0.0; pGroup: Byte = 0; pHide: Boolean = false);
+    constructor Create(pX, pY: Single; pColor: TColor = clWhite; pTU: Single = 0.0; pTV: Single = 0.0; pGroup: Byte = 0; pHide: Boolean = false);
     procedure SetColor(pColor: TColor); //Установить цвет
-    procedure SetCoord(pX, pY: TFloat); //Установить текущие координаты
-    procedure SetTexCoord(pX, pY: TFloat); //Установить текстурные координаты
+    procedure SetCoord(pX, pY: Single); //Установить текущие координаты
+    procedure SetTexCoord(pX, pY: Single); //Установить текстурные координаты
   public
     destructor Destroy; override;
   end;
@@ -250,38 +234,39 @@ type
 //Оффсет на анимированные изображения
   TOffsetImage = class(TPersistent)
   private
-    FX: TFloat;
-    FY: TFloat;
-    FW: TFloat;
-    FH: TFloat;
+    FX: Single;
+    FY: Single;
+    FW: Single;
+    FH: Single;
   public
     constructor Create; overload;
-    constructor Create(pX, pY, pW, pH: TFloat); overload;
+    constructor Create(pX, pY, pW, pH: Single); overload;
   published
-    [TXMLSerial] property X: TFloat read FX write FX;
-    [TXMLSerial] property Y: TFloat read FY write FY;
-    [TXMLSerial] property W: TFloat read FW write FW;
-    [TXMLSerial] property H: TFloat read FH write FH;
+    [TXMLSerial] property X: Single read FX write FX;
+    [TXMLSerial] property Y: Single read FY write FY;
+    [TXMLSerial] property W: Single read FW write FW;
+    [TXMLSerial] property H: Single read FH write FH;
   end;
 
 //===========================================
 //Параметры прозрачности
   TBlendParam = class
-  private
-    FEnable  : Boolean; //Включен или нет
-    FSrc     : TUInt;   //Значение BlendFunc
-    FDst     : TUInt;
-    FAlpha   : TFloat;  //Цвет альфа канала
-    FEquation: TUInt;   //
+  strict private
+    FEnable  : Boolean;  //Включен или нет
+    FSrc     : Cardinal; //Значение BlendFunc
+    FDst     : Cardinal;
+    FAlpha   : Single;  //Цвет альфа канала
+    FEquation: Cardinal;   //
   public
     [TXMLSerial] property Enable  : Boolean read FEnable   write FEnable;
-    [TXMLSerial] property Src     : TUInt   read FSrc      write FSrc;
-    [TXMLSerial] property Dst     : TUInt   read FDst      write FDst;
-    [TXMLSerial] property Alpha   : TFloat  read FAlpha    write FAlpha;
-    [TXMLSerial] property Equation: TUInt   read FEquation write FEquation;
+    [TXMLSerial] property Src     : Cardinal   read FSrc      write FSrc;
+    [TXMLSerial] property Dst     : Cardinal   read FDst      write FDst;
+    [TXMLSerial] property Alpha   : Single  read FAlpha    write FAlpha;
+    [TXMLSerial] property Equation: Cardinal   read FEquation write FEquation;
   public
     constructor Create;
-    procedure SetParam(const AEnable: Boolean; const ASrc, ADst: TUInt);
+    procedure SetParam(const AEnable: Boolean; const ASrc, ADst: Cardinal);
+    procedure CopyFrom(ABlend: TBlendParam);
 
     procedure Bind;
     procedure Set_One_One;
@@ -292,10 +277,10 @@ type
 //Таймер
   TTimerObj = class
   public
-    Enable  : Boolean; //Включен таймер или нет
-    Value   : TUInt;   //Значение
-    MaxValue: TUInt;   //Максимальное значение после которого сбрасывается Value
-    RepeatT : Boolean; //Повторять
+    Enable  : Boolean;  //Включен таймер или нет
+    Value   : Cardinal; //Значение
+    MaxValue: Cardinal; //Максимальное значение после которого сбрасывается Value
+    RepeatT : Boolean;  //Повторять
   public
     procedure Update;
     procedure ClearParam;
@@ -319,7 +304,7 @@ type
        procedure SetAnchHeight(pHeight: Integer);
      public
        //Нарисовать квадрат по размерам
-       procedure Render(pOffset: TFloat = 0.0; pMode: TUInt = GL_LINE_LOOP; pColor: TColor = clWhite);
+       procedure Render(pOffset: Single = 0.0; pMode: Cardinal = GL_LINE_LOOP; pColor: TColor = clWhite);
        function ToString: String; overload;
    end;
 
@@ -329,7 +314,7 @@ type
     private
       FRect           : TGUIObjectRect; //Позиция курсора и размер
       FCursorCharPos  : Integer;     //Позиция текущего символа
-      FCursorRenderPos: TFloat;   //Позиция прорисовки курсора
+      FCursorRenderPos: Single;   //Позиция прорисовки курсора
       FCursorTime     : Cardinal; //Время курсора
       FCursorShow     : Boolean;  //Показывать курсор или нет
       FColor          : TGLColor; //Цвет курсора
@@ -337,7 +322,7 @@ type
     public
       property Rect     : TGUIObjectRect read FRect;
       property CharPos  : Integer        read FCursorCharPos   write FCursorCharPos;
-      property RenderPos: TFloat         read FCursorRenderPos write FCursorRenderPos;
+      property RenderPos: Single         read FCursorRenderPos write FCursorRenderPos;
     public
       constructor Create(pColor: TColor);
       destructor Destroy; override;
@@ -355,19 +340,19 @@ type
     //Установленный цвет
     FColor     : TGLColor;
     //Размер пикселя
-    FPointSize : TFloat;
+    FPointSize : Single;
     //Ширина линии
-    FLineWidth : TFloat;
+    FLineWidth : Single;
     //Позиция X, Y
     FRect      : TGUIObjectRect;
     //
     FOffset    : Integer;
     //Режим прорисовки
-    FDrawMode  : TUInt;
+    FDrawMode  : Cardinal;
     //Смешивание цветов
     FBlend     : TBlendParam;
     //Скорость анимации
-    FSpeed     : TFloat;
+    FSpeed     : Single;
     //Включить плавное появление
     FAnimEnable: Boolean;
   private
@@ -383,11 +368,11 @@ type
     property Show      : Boolean        read FShow       write FShow;
     property Visible   : Boolean        read FVisible    write SetVisible;
     property Color     : TGLColor       read FColor;
-    property PointSize : TFloat         read FPointSize  write FPointSize;
-    property LineWidth : TFloat         read FLineWidth  write FLineWidth;
-    property Speed     : TFloat         read FSpeed      write FSpeed;
+    property PointSize : Single         read FPointSize  write FPointSize;
+    property LineWidth : Single         read FLineWidth  write FLineWidth;
+    property Speed     : Single         read FSpeed      write FSpeed;
     property Offset    : Integer        read FOffset     write FOffset;
-    property DrawMode  : TUInt          read FDrawMode   write FDrawMode;
+    property DrawMode  : Cardinal          read FDrawMode   write FDrawMode;
     property Blend     : TBlendParam    read FBlend      write FBlend;
     property AnimEnable: Boolean        read FAnimEnable write FAnimEnable;
   public
@@ -395,54 +380,33 @@ type
 
 implementation
 
-{ TCoord2D }
+{ TCoord2Df }
 
-procedure TCoord2D.SetValue(pX, pY: TFloat);
+procedure TCoord2Df.SetDefault;
+begin
+  SetValue(0.0, 0.0);
+end;
+
+procedure TCoord2Df.SetValue(pX, pY: Single);
 begin
   X:= pX;
   Y:= pY;
 end;
 
-function TCoord2D.ToString: String;
+function TCoord2Df.ToString: String;
 begin
   Result:= Format('X=%f, Y=%f', [X, Y]);
 end;
 
-{ TCoord3D }
-
-procedure TCoord3D.CopyFrom(pObject: TCoord3D);
-begin
-  X:= pObject.X;
-  Y:= pObject.Y;
-  Z:= pObject.Z;
-end;
-
-procedure TCoord3D.glVertex3fx;
-begin
-  glVertex3f(X, Y, Z);
-end;
-
-procedure TCoord3D.SetValue(pX, pY, pZ: TFloat);
-begin
-  X:= pX;
-  Y:= pY;
-  Z:= pZ;
-end;
-
-function TCoord3D.ToString: String;
-begin
-  Result:= Format('X=%f, Y=%f, Z=%f', [X, Y, Z]);
-end;
-
 { TCoordTetxture }
 
-procedure TTextureCoord.SetCalculatedUV(pUCalc, pVCalc: TFloat);
+procedure TTextureCoord.SetCalculatedUV(pUCalc, pVCalc: Single);
 begin
   FUCalc:= pUCalc;
   FVCalc:= pVCalc;
 end;
 
-procedure TTextureCoord.SetValue(pU, pV: TFloat);
+procedure TTextureCoord.SetValue(pU, pV: Single);
 begin
   U:= pU;
   V:= pV;
@@ -468,7 +432,7 @@ begin
   SetColor(pColor);
 end;
 
-constructor TGLColor.Create(pR, pG, pB: TFloat);
+constructor TGLColor.Create(pR, pG, pB: Single);
 begin
   SetColor(pR, pG, pB);
 end;
@@ -490,7 +454,7 @@ begin
   // Result.A := Byte(pColor shr 24) / 255;
 end;
 
-constructor TGLColor.Create(pR, pG, pB, pA: TFloat);
+constructor TGLColor.Create(pR, pG, pB, pA: Single);
 begin
   SetColor(pR, pG, pB, pA);
 end;
@@ -522,7 +486,7 @@ begin
   Result[3]:= A;
 end;
 
-function TGLColor.GetMeanColor: TFloat;
+function TGLColor.GetMeanColor: Single;
 begin
   Result:= (R + G + B) / 3;
 end;
@@ -559,7 +523,7 @@ begin
   A := Byte(pColor shr 24) / 255;
 end;
 
-procedure TGLColor.SetColor(pR, pG, pB: TFloat);
+procedure TGLColor.SetColor(pR, pG, pB: Single);
 begin
   R:= pR;
   G:= pG;
@@ -567,7 +531,7 @@ begin
   A:= 0.0;
 end;
 
-procedure TGLColor.SetColor(pR, pG, pB, pA: TFloat);
+procedure TGLColor.SetColor(pR, pG, pB, pA: Single);
 begin
   R:= pR;
   G:= pG;
@@ -648,7 +612,7 @@ end;
 
 { TVertexPointClass }
 
-constructor TVertexClass.Create(pX, pY: TFloat; pColor: TColor; pTU, pTV: TFloat; pGroup: Byte; pHide: Boolean);
+constructor TVertexClass.Create(pX, pY: Single; pColor: TColor; pTU, pTV: Single; pGroup: Byte; pHide: Boolean);
 begin
   Color    := TGLColor.Create;
   SetCoord(pX, pY);
@@ -672,13 +636,13 @@ begin
   Color.SetColor(pColor);
 end;
 
-procedure TVertexClass.SetCoord(pX, pY: TFloat);
+procedure TVertexClass.SetCoord(pX, pY: Single);
 begin
   Vertex.X:= pX;
   Vertex.Y:= pY;
 end;
 
-procedure TVertexClass.SetTexCoord(pX, pY: TFloat);
+procedure TVertexClass.SetTexCoord(pX, pY: Single);
 begin
   TexCoord.U:= pX;
   TexCoord.V:= pY;
@@ -686,7 +650,7 @@ end;
 
 { TOffsetImage }
 
-constructor TOffsetImage.Create(pX, pY, pW, pH: TFloat);
+constructor TOffsetImage.Create(pX, pY, pW, pH: Single);
 begin
   FX:= pX;
   FY:= pY;
@@ -727,6 +691,18 @@ begin
   glBlendEquation(FEquation);
 end;
 
+procedure TBlendParam.CopyFrom(ABlend: TBlendParam);
+begin
+  if not Assigned(ABlend) then
+    Exit;
+
+  Enable  := ABlend.Enable;
+  Src     := ABlend.Src;
+  Dst     := ABlend.Dst;
+  Alpha   := ABlend.Alpha;
+  Equation:= ABlend.Equation;
+end;
+
 constructor TBlendParam.Create;
 begin
   FEnable  := False;
@@ -736,7 +712,7 @@ begin
   FAlpha   := 1.0;
 end;
 
-procedure TBlendParam.SetParam(const AEnable: Boolean; const ASrc, ADst: TUInt);
+procedure TBlendParam.SetParam(const AEnable: Boolean; const ASrc, ADst: Cardinal);
 begin
   FEnable:= AEnable;
   FSrc   := ASrc;
@@ -785,7 +761,7 @@ end;
 
 { TTextureLinkSquadArr }
 
-procedure TTextureLinkSquadArr.SetCoord(p1x, p1y, p2x, p2y, p3x, p3y, p4x, p4y: TFloat);
+procedure TTextureLinkSquadArr.SetCoord(p1x, p1y, p2x, p2y, p3x, p3y, p4x, p4y: Single);
 begin
   Index[0].U:= p1x;
   Index[0].V:= p1y;
@@ -800,7 +776,7 @@ begin
   Index[3].V:= p4y;
 end;
 
-procedure TTextureLinkSquadArr.SetSize(pW, pH: TFloat);
+procedure TTextureLinkSquadArr.SetSize(pW, pH: Single);
 begin
   SetCoord(1 ,  1,
            pW,  1,
@@ -829,7 +805,7 @@ begin
 end;
 
 procedure TGUICursor.Render;
-var Corr: TFloat;
+var Corr: Single;
 begin
   if GetCurrentTime - FCursorTime > FWaitTime then
   begin
@@ -861,8 +837,8 @@ end;
 
 { TGUIObjectRect }
 
-procedure TGUIObjectRect.Render(pOffset: TFloat = 0.0; pMode: TUInt = GL_LINE_LOOP; pColor: TColor = clWhite);
-var ACorr: TFloat;
+procedure TGUIObjectRect.Render(pOffset: Single = 0.0; pMode: Cardinal = GL_LINE_LOOP; pColor: TColor = clWhite);
+var ACorr: Single;
     Buf  : TGLColor4Rec;
 begin
   Buf:= TGLColor.ColorToGLColor4Rec(pColor);
@@ -1001,6 +977,13 @@ begin
   B:= 0.0;
 end;
 
+procedure TGLColor3Rec.SetColor(pColor: TColor);
+begin
+  R := Byte(pColor) / 255;
+  G := Byte(pColor shr 8)  / 255;
+  B := Byte(pColor shr 16) / 255;
+end;
+
 procedure TGLColor3Rec.SetColor(pColor: TGLColor);
 begin
  if not Assigned(pColor) then
@@ -1012,7 +995,7 @@ begin
 
 end;
 
-procedure TGLColor3Rec.SetColor(pR, pG, pB: TFloat);
+procedure TGLColor3Rec.SetColor(pR, pG, pB: Single);
 begin
   R:= pR;
   G:= pG;
@@ -1034,6 +1017,22 @@ begin
   A:= 0.0;
 end;
 
+procedure TGLColor4Rec.CopyFrom(AColor4Rec: TGLColor4Rec);
+begin
+  R:= AColor4Rec.R;
+  G:= AColor4Rec.G;
+  B:= AColor4Rec.B;
+  A:= AColor4Rec.A;
+end;
+
+procedure TGLColor4Rec.SetColor(pColor: TColor);
+begin
+  R := Byte(pColor) / 255;
+  G := Byte(pColor shr 8)  / 255;
+  B := Byte(pColor shr 16) / 255;
+  A := Byte(pColor shr 24) / 255;
+end;
+
 procedure TGLColor4Rec.SetColor(pColor: TGLColor);
 begin
   if not Assigned(pColor) then
@@ -1046,7 +1045,7 @@ begin
 // A:= pColor.A;
 end;
 
-procedure TGLColor4Rec.SetColor(pR, pG, pB, pA: TFloat);
+procedure TGLColor4Rec.SetColor(pR, pG, pB, pA: Single);
 begin
   R:= pR;
   G:= pG;
@@ -1060,6 +1059,12 @@ procedure TCoord2DI.SetDefault;
 begin
   X:= 0;
   Y:= 0;
+end;
+
+procedure TCoord2DI.SetValue(pX, pY: Integer);
+begin
+  X:= pX;
+  Y:= pY;
 end;
 
 end.

@@ -33,6 +33,7 @@ interface
        procedure RenderText; override;
        procedure OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton); override;
      public
+       [TXMLSerial] property Rect;
        [TXMLSerial] property Checked: Boolean read FChecked write FChecked;
        [TXMLSerial] property Text: String read FText write SetText;
    end;

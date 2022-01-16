@@ -27,15 +27,15 @@ type
       constructor Create;
 
       //
-      procedure MakeLine(pX, pY, pX2, pY2: TFloat; pVColor1, pVColor2: TColor; pGroup: Byte = 0; pHide: Boolean = false);
+      procedure MakeLine(pX, pY, pX2, pY2: Single; pVColor1, pVColor2: TColor; pGroup: Byte = 0; pHide: Boolean = false);
       //Добавить 4 вершины
-      procedure MakeSquare(pX, pY, pWidth, pHeight: TFloat; pVColor: TColor; pTextureLink: TTextureLink; pGroup: Byte = 0; pHide: Boolean = false); overload;
-      procedure MakeSquare(pX, pY, pWidth, pHeight: TFloat; pVColor1, pVColor2, pVColor3, pVColor4: TColor; pTextureLinkArr: TTextureLinkSquadArr; pGroup: Byte = 0; pHide: Boolean = false); overload;
-      procedure MakeSquare(pX, pY, pWidth, pHeight: TFloat; pVColor: TColor; pTextureLinkArr: TTextureLinkSquadArr; pGroup: Byte = 0; pHide: Boolean = false); overload;
+      procedure MakeSquare(pX, pY, pWidth, pHeight: Single; pVColor: TColor; pTextureLink: TTextureLink; pGroup: Byte = 0; pHide: Boolean = false); overload;
+      procedure MakeSquare(pX, pY, pWidth, pHeight: Single; pVColor1, pVColor2, pVColor3, pVColor4: TColor; pTextureLinkArr: TTextureLinkSquadArr; pGroup: Byte = 0; pHide: Boolean = false); overload;
+      procedure MakeSquare(pX, pY, pWidth, pHeight: Single; pVColor: TColor; pTextureLinkArr: TTextureLinkSquadArr; pGroup: Byte = 0; pHide: Boolean = false); overload;
       procedure MakeSquareOffset(pLink: Integer; pOffset: integer; pColor: TColor; pTextureLinkArr: TTextureLinkSquadArr; pGroup: Byte = 0; pHide: Boolean = false); overload;
       procedure MakeSquareOffset(pLink: Integer; pOffset: integer; pVColor1, pVColor2, pVColor3, pVColor4: TColor; pTextureLinkArr: TTextureLinkSquadArr; pGroup: Byte = 0; pHide: Boolean = false); overload;
       //Добавить вершину в список
-      function Make(pX, pY: TFloat; pColor: TColor; pTU, pTV: TFloat; pGroup: Byte = 0; pHide: Boolean = false): TVertexClass;
+      function Make(pX, pY: Single; pColor: TColor; pTU, pTV: Single; pGroup: Byte = 0; pHide: Boolean = false): TVertexClass;
       //Проверить есть ли вершина по индексу
       function IsExists(pIndex: Integer): Boolean;
       //Установить цвет вершине по индексу
@@ -50,10 +50,10 @@ type
       //Скрыть вершину по индексу
       procedure SetVertexHide(pIndex: Integer; pHide: Boolean);
       //Указать вершине новые координаты
-      procedure SetVertexPos(pIndex: Integer; pX, pY: TFloat);
-      procedure SetVertexPosSquare(pIndexStart: Integer; pX, pY, pWidth, pHeight: TFloat);
+      procedure SetVertexPos(pIndex: Integer; pX, pY: Single);
+      procedure SetVertexPosSquare(pIndexStart: Integer; pX, pY, pWidth, pHeight: Single);
       //Установить текстурные координаты
-      procedure SetVertexTextureUV(pIndex: Integer; pU, pV: TFloat);
+      procedure SetVertexTextureUV(pIndex: Integer; pU, pV: Single);
       //Установить текстурные координаты группе вершин
       procedure SetVertexTextureMap(pIndexStart: Integer; pTextureCoord: TTextureLinkSquadArr);
       //Установить все координаты текстуры объекта в 1, 1
@@ -222,7 +222,7 @@ begin
       TVertexClass(FVertexList.Items[i]).Hide:= not pShow;
 end;
 
-procedure TGUIVertexList.SetVertexPos(pIndex: Integer; pX, pY: TFloat);
+procedure TGUIVertexList.SetVertexPos(pIndex: Integer; pX, pY: Single);
 begin
   if not IsExists(pIndex) then
     Exit;
@@ -230,7 +230,7 @@ begin
   TVertexClass(FVertexList.Items[pIndex]).SetCoord(pX, pY);
 end;
 
-procedure TGUIVertexList.SetVertexPosSquare(pIndexStart: Integer; pX, pY, pWidth, pHeight: TFloat);
+procedure TGUIVertexList.SetVertexPosSquare(pIndexStart: Integer; pX, pY, pWidth, pHeight: Single);
 begin
   SetVertexPos( pIndexStart    , pX         , pY);
   SetVertexPos( pIndexStart + 1, pX + pWidth, pY);
@@ -268,7 +268,7 @@ begin
     TVertexClass(FVertexList.Items[i]).TexCoord.SetValue(Buf.U + 1, Buf.V + 1);
 end;
 
-procedure TGUIVertexList.SetVertexTextureUV(pIndex: Integer; pU, pV: TFloat);
+procedure TGUIVertexList.SetVertexTextureUV(pIndex: Integer; pU, pV: Single);
 begin
   if not IsExists(pIndex) then
     Exit;
@@ -276,19 +276,19 @@ begin
   TVertexClass(FVertexList.Items[pIndex]).SetTexCoord(pU, pV);
 end;
 
-function TGUIVertexList.Make(pX, pY: TFloat; pColor: TColor; pTU, pTV: TFloat; pGroup: Byte = 0; pHide: Boolean = false): TVertexClass;
+function TGUIVertexList.Make(pX, pY: Single; pColor: TColor; pTU, pTV: Single; pGroup: Byte = 0; pHide: Boolean = false): TVertexClass;
 begin
   Result:= TVertexClass.Create(pX, pY, pColor, pTU, pTV, pGroup, pHide);
   FVertexList.Add(Result);
 end;
 
-procedure TGUIVertexList.MakeLine(pX, pY, pX2, pY2: TFloat; pVColor1, pVColor2: TColor; pGroup: Byte = 0; pHide: Boolean = false);
+procedure TGUIVertexList.MakeLine(pX, pY, pX2, pY2: Single; pVColor1, pVColor2: TColor; pGroup: Byte = 0; pHide: Boolean = false);
 begin
   Make(pX , pY , pVColor1, 0, 0, pGroup, pHide);
   Make(pX2, pY2, pVColor2, 1, 1, pGroup, pHide).GapOccur:= True;
 end;
 
-procedure TGUIVertexList.MakeSquare(pX, pY, pWidth, pHeight: TFloat; pVColor: TColor; pTextureLinkArr: TTextureLinkSquadArr;
+procedure TGUIVertexList.MakeSquare(pX, pY, pWidth, pHeight: Single; pVColor: TColor; pTextureLinkArr: TTextureLinkSquadArr;
   pGroup: Byte = 0; pHide: Boolean = false);
 begin
   MakeSquare(pX, pY, pWidth, pHeight, pVColor, pVColor, pVColor, pVColor, pTextureLinkArr, pGroup, pHide);
@@ -314,7 +314,7 @@ end;
 procedure TGUIVertexList.MakeSquareOffset(pLink, pOffset: integer; pVColor1,
   pVColor2, pVColor3, pVColor4: TColor; pTextureLinkArr: TTextureLinkSquadArr;
   pGroup: Byte; pHide: Boolean);
-var X, Y: TFloat;
+var X, Y: Single;
 begin
   if not IsExists(pLink + 3) then
     Exit;
@@ -344,7 +344,7 @@ begin
   MakeSquareOffset(pLink, pOffset, pColor, pColor, pColor, pColor, pTextureLinkArr, pGroup, pHide);
 end;
 
-procedure TGUIVertexList.MakeSquare(pX, pY, pWidth, pHeight: TFloat; pVColor: TColor; pTextureLink: TTextureLink; pGroup: Byte = 0; pHide: Boolean = false);
+procedure TGUIVertexList.MakeSquare(pX, pY, pWidth, pHeight: Single; pVColor: TColor; pTextureLink: TTextureLink; pGroup: Byte = 0; pHide: Boolean = false);
 var TextureLinkSquadArr: TTextureLinkSquadArr;
 begin
   if pTextureLink <> nil then
@@ -355,7 +355,7 @@ begin
   MakeSquare(pX, pY, pWidth, pHeight, pVColor, TextureLinkSquadArr, pGroup, pHide);
 end;
 
-procedure TGUIVertexList.MakeSquare(pX, pY, pWidth, pHeight: TFloat;
+procedure TGUIVertexList.MakeSquare(pX, pY, pWidth, pHeight: Single;
   pVColor1, pVColor2, pVColor3, pVColor4: TColor; pTextureLinkArr: TTextureLinkSquadArr; pGroup: Byte = 0; pHide: Boolean = false);
 begin
   Make(pX         , pY          , pVColor1, pTextureLinkArr.Index[0].U, pTextureLinkArr.Index[0].V, pGroup, pHide);

@@ -106,16 +106,16 @@ type
    //Прозрачность объекта
    TGUIObjectAlpha = class(TPersistent)
      public
-       FValue : TFloat; //Индекс прозрачности
-       FSrc   : TUInt; //Blend src (GL_ONE)
-       FDst   : TUInt; //Blend dst (GL_DST_COLOR)
+       FValue : Single;   //Индекс прозрачности
+       FSrc   : Cardinal; //Blend src (GL_ONE)
+       FDst   : Cardinal; //Blend dst (GL_DST_COLOR)
      public
-       constructor Create(pValue: TFloat; pSrc, pDst: TUInt);
-       procedure SetValue(pValue: TFloat; pSrc: TUInt = GL_ONE; pDst: TUInt = GL_ONE_MINUS_SRC_ALPHA);
+       constructor Create(pValue: Single; pSrc, pDst: Cardinal);
+       procedure SetValue(pValue: Single; pSrc: Cardinal = GL_ONE; pDst: Cardinal = GL_ONE_MINUS_SRC_ALPHA);
      published
-       property Value: TFloat read FValue write FValue;
-       property Src  : TUInt  read FSrc   write FSrc;
-       property Dst  : TUInt  read FDst   write FDst;
+       property Value: Single read FValue write FValue;
+       property Src  : Cardinal  read FSrc   write FSrc;
+       property Dst  : Cardinal  read FDst   write FDst;
    end;
 
    //Размеры текстуры устанавливаются при назначении текстуры объекту
@@ -130,18 +130,20 @@ type
    //Всплывающая подсказка (Параметры потом передаются в класс Hint'а на форме)
    //TGUIFormHint
    TGUIHintObject = class(TPersistent)
-     private
+     strict private
        FText   : String;  //Текст всплывающей подсказки
        FColor  : TColor;  //Цвет всплывающей подсказки
        FEnable : Boolean; //Включено отображение подсказки или нет
        FBGColor: TColor;  //Фоновый цвет
-     private
-       constructor Create;
+     strict private
        procedure SetText(pText: String);
        procedure SetColor(pColor: TColor);
        procedure SetEnable(pEnable: Boolean);
        procedure SetBackgroundColor(pColor: TColor);
-     published
+     public
+       constructor Create;
+       procedure CopyFrom(AHint: TGUIHintObject);
+     public
        [TXMLSerial] property Text  : String          read FText    write SetText;
        [TXMLSerial] property Color : TColor          read FColor   write SetColor;
        [TXMLSerial] property Enable: Boolean         read FEnable  write SetEnable;
@@ -168,13 +170,13 @@ type
        FShowOnTop   : Boolean; //При фокусе переместить объект в самый конец списка (для ComboBox например)
        FRenderProps : TGUIRenderProps; //Какие то доп опции для рендеринга
      private
-       FTextureLink : TTextureLink;
+       [TXMLSerial] FTextureLink: TTextureLink;
      protected
-       FScale       : TFloat; //Увеличение
+       FScale       : Single; //Увеличение
        FFont        : TGUIFont; //Шрифт
        FBlend       : TBlendParam; //Смешивание цветов
        FColor       : TGLColor; //Цвет
-       FModeDraw    : TUInt; //Режим прорисовки
+       FModeDraw    : Cardinal; //Режим прорисовки
      protected
        FParent      : TGUIObject; //Родитель объекта
        FPopupMenu   : TGUIObject; //Выпадающий список
@@ -189,7 +191,7 @@ type
        //Установить popupmenu
        procedure SetPopupMenu(pPopupMenu: TGUIObject);
 
-       procedure SetScale(pScale: TFloat); virtual; //Установить размер
+       procedure SetScale(pScale: Single); virtual; //Установить размер
        procedure SetWidth(pWidth: Integer); //Установить ширину компонента
        procedure SetHeight(pHeight: Integer); //Установить высоту компонента
        procedure SetResize; virtual; {SetChangeRect} //Вызывается в SetWidth, SetHeight при изменении размера
@@ -213,7 +215,7 @@ type
        function ObjectInAction(pAction: array of TGUIActionSetter; pCheckOr: Boolean = True): Boolean;
      public
        //Узнать позицию родителя (нужно для отрисовки компонента на форме)
-       function GetParentPos: TCoord2D;
+       function GetParentPos: TCoord2Df;
        //Установить ссылку на текстуру
        procedure SetTextureLink(pTextureLink: TTextureLink); virtual;
        //Скопировать текстуру
@@ -260,7 +262,7 @@ type
        property Font         : TGUIFont             read FFont               write SetFontLink;
        property PopupMenu    : TGUIObject           read FPopupMenu          write SetPopupMenu;
        property Parent       : TGUIObject           read FParent             write FParent;
-       property Scale        : TFloat               read FScale              write SetScale;
+       property Scale        : Single               read FScale              write SetScale;
        property Hint         : TGUIHintObject       read FHint               write FHint;
        property Blend        : TBlendParam          read FBlend              write FBlend;
        property Area         : TGUITypeArea         read FArea               write FArea;
@@ -403,7 +405,7 @@ begin
   Result:= FColor.GetColor;
 end;
 
-function TGUIObject.GetParentPos: TCoord2D;
+function TGUIObject.GetParentPos: TCoord2Df;
 begin
   Result.X:= 0.0;
   Result.Y:= 0.0;
@@ -757,6 +759,10 @@ end;
 
 procedure TGUIObject.SetTextureCopyFrom(pTextureLink: TTextureLink);
 begin
+  //Можно сделать создание текстуры тогда нужно будет ее в деструкторе уничтожать
+  if not Assigned(FTextureLink) then
+    Exit;
+
   FTextureLink.CopyFrom(pTextureLink);
   ChangeTextureInfo;
 end;
@@ -782,7 +788,7 @@ procedure TGUIObject.SetResize;
 begin
 end;
 
-procedure TGUIObject.SetScale(pScale: TFloat);
+procedure TGUIObject.SetScale(pScale: Single);
 begin
   FScale:= pScale;
 end;
@@ -825,12 +831,12 @@ end;
 
 { TGUIObjectAlpha }
 
-constructor TGUIObjectAlpha.Create(pValue: TFloat; pSrc, pDst: TUInt);
+constructor TGUIObjectAlpha.Create(pValue: Single; pSrc, pDst: Cardinal);
 begin
   SetValue(pValue, pSrc, pDst);
 end;
 
-procedure TGUIObjectAlpha.SetValue(pValue: TFloat; pSrc: TUInt = GL_ONE; pDst: TUInt = GL_ONE_MINUS_SRC_ALPHA);
+procedure TGUIObjectAlpha.SetValue(pValue: Single; pSrc: Cardinal = GL_ONE; pDst: Cardinal = GL_ONE_MINUS_SRC_ALPHA);
 begin
   Value:= pValue;
   Src  := pSrc;
@@ -846,6 +852,17 @@ begin
 end;
 
 { TGUIHintObject }
+
+procedure TGUIHintObject.CopyFrom(AHint: TGUIHintObject);
+begin
+  if not Assigned(AHint) then
+    Exit;
+
+  Text           := AHint.Text;
+  Color          := AHint.Color;
+  Enable         := AHint.Enable;
+  BackgroundColor:= AHint.BackgroundColor;
+end;
 
 constructor TGUIHintObject.Create;
 begin

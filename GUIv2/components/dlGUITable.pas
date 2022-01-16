@@ -213,6 +213,7 @@ type
       OnUnSelectCell: TGUIProc; //Нажали в пустую область и выбор отменился
       OnRender      : TGUIProc;
     public
+      [TXMLSerial] property Rect;
       [TXMLSerial] property Properties: TGUITableProperties read FProperties;
       [TXMLSerial] property Selected  : TGUITableSelected   read FSelected;
       [TXMLSerial] property Headers   : TGUITableHeaders    read FHeaders;

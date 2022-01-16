@@ -172,7 +172,7 @@ begin
 end;
 
 function TGUITracker.GetTrackerPos: Integer;
-var Persent: TFloat;
+var Persent: Single;
 begin
   //Получить текущий элемент по позиции трекера
   Result:= 0;

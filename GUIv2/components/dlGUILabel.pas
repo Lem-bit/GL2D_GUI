@@ -32,6 +32,7 @@ type
       procedure Render; override;
       procedure ClearTexture;
     public
+      [TXMLSerial] property Rect;
       [TXMLSerial] property Text    : String  read FText     write SetText;
       [TXMLSerial] property WordWarp: Boolean read FWordWarp write FWordWarp;
   end;

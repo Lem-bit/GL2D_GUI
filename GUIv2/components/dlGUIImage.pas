@@ -28,6 +28,7 @@ uses Graphics, dlGUITypes, dlGUIObject, dlGUIXmlSerial;
        constructor Create(pName: String = ''; pTextureLink: TTextureLink = nil);
        procedure SetImageLink(const ATextureLink: TTextureLink);
      published
+       [TXMLSerial] property Rect;
        [TXMLSerial] property Proportion: Boolean read FProportion write SetProportion;
    end;
 

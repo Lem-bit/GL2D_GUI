@@ -58,6 +58,7 @@ type
       procedure SetDefaultColor;
       procedure RenderText; override;
     public
+      [TXMLSerial] property Rect;
       [TXMLSerial] property StrFormat  : String           read FFormat        write SetFormat;
       [TXMLSerial] property ShowText   : TGUIShowTextProp read FShowText      write FShowText       default stNone;
       [TXMLSerial] property BorderColor: TColor           read GetBorderColor write SetBorderColor;
@@ -132,7 +133,7 @@ begin
 end;
 
 procedure TGUIProgressBar.RecalcTextPos;
-var TxtWidth: TFloat;
+var TxtWidth: Single;
 begin
   FStrValue    := Format(FFormat, [ FValue.ToString ]);
   TxtWidth     := FFont.GetTextWidth(FStrValue);

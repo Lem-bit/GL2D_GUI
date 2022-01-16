@@ -48,19 +48,21 @@ uses SysUtils, XMLIntf, XMLDoc, Classes, Graphics, dlOpenGL, dlTextureLoader, dl
       );
 
 type
+  TTextureListSearchParam = (spName, spFileName);
+  TTextureListSearchParamSet = Set of TTextureListSearchParam;
   TTextureList = class
     private
       FItem  : TList;
       FLoader: TTextureLoader;
     private
-      function TexFormatToStr(const AFormat: TUInt): String;
-      function StrToTexFormat(const AFormat: String): TUInt;
+      function TexFormatToStr(const AFormat: Cardinal): String;
+      function StrToTexFormat(const AFormat: String): Cardinal;
 
-      function TexEnvModeToStr(const AEnvMode: TUInt): String;
-      function StrToTexEnvMode(const AEnvMode: String): TUInt;
+      function TexEnvModeToStr(const AEnvMode: Cardinal): String;
+      function StrToTexEnvMode(const AEnvMode: String): Cardinal;
 
-      function TexFilterToStr(const AFilter: TUInt): String;
-      function StrToTexFilter(const AFilter: String): TUInt;
+      function TexFilterToStr(const AFilter: Cardinal): String;
+      function StrToTexFilter(const AFilter: String): Cardinal;
     private
       function GetTextureById(Id: Integer): TTextureLink;
       function GetTextureByName(AName: String): TTextureLink;
@@ -73,13 +75,13 @@ type
       //Добавить текстуру
       function Add(const AName, AFileName: String): Boolean; overload;
       function Add(const AName, AFileName: String;
-         const AFormat: TUInt; const AEnvMode: TUInt; const AFilter: TUInt;
+         const AFormat: Cardinal; const AEnvMode: Cardinal; const AFilter: Cardinal;
          const ABMPConv: Boolean = false; const ABMPConvAlpha: TColor = clBlack): Boolean; overload;
 
       //Найти текстуру и вернуть ссылку на текстуру
       function GetLink(const AName: String): Cardinal;
       //Найти текстуру по названию
-      function Search(const AName: String): TTextureLink;
+      function Search(const AName: String; AParam: TTextureListSearchParamSet = [spName]): TTextureLink;
       //Удалить текстуру
       function Delete(const AName: String): Boolean;
     public
@@ -88,8 +90,8 @@ type
       //Загрузить список текстур из XML
       function LoadFromXML(pFileName: String): Boolean;
     public
-      property TextureById[id: integer]: TTextureLink  read GetTextureById;
-      property Texture[name: string]: TTextureLink read GetTextureByName;
+      property TextureById[id: integer]: TTextureLink read GetTextureById;
+      property Texture[name: string]   : TTextureLink read GetTextureByName;
   end;
 
 var TextureList: TTextureList;
@@ -108,7 +110,7 @@ begin
 end;
 
 function TTextureList.Add(const AName, AFileName: String; const AFormat,
-  AEnvMode, AFilter: TUInt;
+  AEnvMode, AFilter: Cardinal;
   const ABMPConv: Boolean = false;
   const ABMPConvAlpha: TColor = clBlack): Boolean;
 var Buf: TTextureLink;
@@ -251,6 +253,7 @@ var XML  : IXMLDocument;
     Root : IXMLNode;
     Node : IXMLNode;
     FID  : Integer;
+    buf: string;
 begin
   Result:= False;
 
@@ -268,6 +271,8 @@ begin
     begin
       Node:= Root.ChildNodes.Nodes[FID];
 
+      if Node.HasAttribute('Name') then
+        buf:= Node.Attributes['Name'];
       Add(
            GetAttr(Node, 'Name', ''),
            GetAttr(Node, 'FileName', ''),
@@ -325,8 +330,9 @@ begin
   end;
 end;
 
-function TTextureList.Search(const AName: String): TTextureLink;
+function TTextureList.Search(const AName: String; AParam: TTextureListSearchParamSet): TTextureLink;
 var i: integer;
+    Link: TTextureLink;
 begin
   Result:= nil;
 
@@ -334,15 +340,21 @@ begin
     Exit;
 
   for i := 0 to FItem.Count - 1 do
-    if SameText(AName, TTextureLink(FItem[i]).Name) then
-    begin
-      Result:= TTextureLink(FItem[i]);
-      Break;
-    end;
+  begin
+    Link:= TTextureLink(FItem[i]);
+
+    if spName in AParam then
+      if SameText(AName, Link.Name) then
+        Exit(Link);
+
+    if spFileName in AParam then
+      if SameText(AName, Link.FileName) then
+        Exit(Link);
+  end;
 
 end;
 
-function TTextureList.StrToTexFormat(const AFormat: String): TUInt;
+function TTextureList.StrToTexFormat(const AFormat: String): Cardinal;
 var i: integer;
 begin
   Result:= TListTexFormat[Low(TListTexFormat)].Index;
@@ -356,7 +368,7 @@ begin
 
 end;
 
-function TTextureList.TexFormatToStr(const AFormat: TUInt): String;
+function TTextureList.TexFormatToStr(const AFormat: Cardinal): String;
 var i: integer;
 begin
   Result:= TListTexFormat[Low(TListTexFormat)].Name;
@@ -370,7 +382,7 @@ begin
 
 end;
 
-function TTextureList.StrToTexEnvMode(const AEnvMode: String): TUInt;
+function TTextureList.StrToTexEnvMode(const AEnvMode: String): Cardinal;
 var i: integer;
 begin
   Result:= TListTexEnvMode[Low(TListTexEnvMode)].Index;
@@ -383,7 +395,7 @@ begin
     end;
 end;
 
-function TTextureList.TexEnvModeToStr(const AEnvMode: TUInt): String;
+function TTextureList.TexEnvModeToStr(const AEnvMode: Cardinal): String;
 var i: integer;
 begin
   Result:= TListTexEnvMode[Low(TListTexEnvMode)].Name;
@@ -396,7 +408,7 @@ begin
     end;
 end;
 
-function TTextureList.StrToTexFilter(const AFilter: String): TUInt;
+function TTextureList.StrToTexFilter(const AFilter: String): Cardinal;
 var i: integer;
 begin
   Result:= TListTexFilter[Low(TListTexFilter)].Index;
@@ -409,7 +421,7 @@ begin
     end;
 end;
 
-function TTextureList.TexFilterToStr(const AFilter: TUInt): String;
+function TTextureList.TexFilterToStr(const AFilter: Cardinal): String;
 var i: integer;
 begin
   Result:= TListTexFilter[Low(TListTexFilter)].Name;

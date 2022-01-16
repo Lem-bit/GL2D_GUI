@@ -28,6 +28,7 @@ type
     public
       constructor Create(pName: String = ''; pTextureLink: TTextureLink = nil);
     public
+      [TXMLSerial] property Rect;
       [TXMLSerial] property Border: Integer read FBorder write SetBorder;
   end;
 

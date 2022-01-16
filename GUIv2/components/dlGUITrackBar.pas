@@ -52,7 +52,7 @@ type
     procedure SetOrient(pValue: TGUIOrientation);
 
     function GetRealWidth: Integer; //Ширина поля трекера
-    function GetCellValue: TFloat;  //Размер (соотношение) 1 пикселя
+    function GetCellValue: Single;  //Размер (соотношение) 1 пикселя
   protected
     procedure SetFontEvent; override;
     procedure SetResize; override;
@@ -70,6 +70,7 @@ type
     procedure OnMouseMove(pX, pY: Integer); override;
 
   public
+    [TXMLSerial] property Rect;
     [TXMLSerial] property FillColor : TColor          read FFillColor  write SetFillColor;
     [TXMLSerial] property TrackColor: TColor          read FTrackColor write SetTrackColor;
     [TXMLSerial] property TrackWidth: Integer         read FTrackWidth write SetTrackWidth;
@@ -109,7 +110,7 @@ begin
   SetOrient(goHorizontal);
 end;
 
-function TGUITrackBar.GetCellValue: TFloat;
+function TGUITrackBar.GetCellValue: Single;
 begin
   Result:= 0;
   case FOrient of

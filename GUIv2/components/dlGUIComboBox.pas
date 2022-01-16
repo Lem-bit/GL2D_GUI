@@ -83,6 +83,8 @@ type
       procedure SaveToFile(const AFileName: String);
     public
       property Item[index: integer]: TGUIListBoxItem read GetItem;
+    public
+      [TXMLSerial] property Rect;
       [TXMLSerial] property Text     : String  read GetText write SetText;
       [TXMLSerial] property ItemIndex: Integer read FItemIndex;
   end;

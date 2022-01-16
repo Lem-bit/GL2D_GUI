@@ -142,6 +142,7 @@ type
       procedure RenderText; override;
       procedure Render; override;
     public
+      [TXMLSerial] property Rect;
       [TXMLSerial] property CursorWidth: Integer         read FCursorWidth write FCursorWidth;
       [TXMLSerial] property Text       : String          read FText        write SetText;
       [TXMLSerial] property MaxLength  : Integer         read FMaxLength   write SetMaxLength;
@@ -159,7 +160,7 @@ const GROUP_CURSOR = 1;
 
 function TGUIEditBox.CharPosByCoord(pCoord: Integer): Integer;
 var i   : integer;
-    BPos: TFloat;
+    BPos: Single;
 begin
   BPos:= 0.0;
 

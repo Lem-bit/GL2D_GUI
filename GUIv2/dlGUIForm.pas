@@ -22,9 +22,9 @@ type
   TGUIFormHint = class(TGUIObject)
     strict private
       FText     : String;
-      FLastTime : TUInt;
-      FWaitStart: TUInt;
-      FShowTime : TUInt;
+      FLastTime : Cardinal;
+      FWaitStart: Cardinal;
+      FShowTime : Cardinal;
     protected
       procedure SetColor(pColor: TColor); override;
     strict private
@@ -179,7 +179,6 @@ type
       [TXMLSerial] property Color;
       [TXMLSerial] property Hide;
       [TXMLSerial] property Enable;
-      [TXMLSerial] property TextureName;
       [TXMLSerial] property Font;
       [TXMLSerial] property Parent;
       [TXMLSerial] property Hint;
@@ -242,7 +241,10 @@ begin
     //Добавим шрифт от формы если нет у компонента
     if Font.GetTextureLink <> nil then
       if pComponent.Font.GetTextureLink = nil then
-        pComponent.Font.CopyFrom(Font);
+        pComponent.Font.CopyFrom(Font)
+      else
+       if pComponent.Font.GetTextureLink.IsEmpty then
+         pComponent.Font.CopyFrom(Font);
 
     inc(FIndex);
     pComponent.GUID  := TGUID.NewGuid.ToString;
@@ -321,6 +323,7 @@ constructor TGUIForm.Create(pName: String; pTextureLink: TTextureLink);
 var ARect: TGUIObjectRect;
 begin
   inherited Create(pName, gtcForm);
+
   FComponent:= TList.Create;
   FHint:= TGUIFormHint.Create;
   FFocused:= TGUIFocusComp.Create;
@@ -1065,11 +1068,23 @@ begin
 end;
 
 procedure TGUIForm.SetFontEvent;
+var i: integer;
+    Obj: TGUIObject;
 begin
   inherited;
 
   if fsetTexture in Font._Setter then
+  begin
     FHint.Font.SetTextureLink(Self.Font.GetTextureLink);
+
+    for i := 0 to FComponent.Count - 1 do
+    begin
+      Obj:= TGUIObject(FComponent[i]);
+
+      if Obj.Font.GetTextureLink = nil then
+        Obj.Font.SetTextureLink(Self.Font.GetTextureLink);
+    end;
+  end;
 
   FTextOffset.X:= 2;
   FTextOffset.Y:= Round((CAPTION_HEIGHT / 2) - (Font.Height / 2)) - 1;
@@ -1260,6 +1275,8 @@ begin
 end;
 
 procedure TGUIForm.SetTextureLink(pTextureLink: TTextureLink);
+var i: Integer;
+    Obj: TGUIObject;
 begin
   inherited;
 
@@ -1267,6 +1284,15 @@ begin
     FBtnMinimize.SetTextureLink(pTextureLink);
   if Assigned(FBtnHide) then
     FBtnHide.SetTextureLink(pTextureLink);
+
+  for i := 0 to FComponent.Count - 1 do
+  begin
+    Obj:= TGUIObject(FComponent[i]);
+
+    if Obj.GetTextureLink = nil then
+      Obj.SetTextureLink(pTextureLink);
+  end;
+
 end;
 
 function TGUIForm.ShowPopupMenu(pPopupMenu: TGUIObject; pX, pY: Integer; pButton: TGUIMouseButton): Boolean;

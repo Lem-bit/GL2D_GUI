@@ -37,6 +37,7 @@ type
       procedure OnMouseDown(pX, pY: Integer; Button: TGUIMouseButton); override;
       procedure BroadcastMessage(pMessage: TGUIMessage); override;
     public
+      [TXMLSerial] property Rect;
       [TXMLSerial] property Checked: Boolean read FChecked write ChangeStatus;
       [TXMLSerial] property Group  : Byte    read FGroup   write FGroup;
       [TXMLSerial] property Text   : String  read FText    write FText;

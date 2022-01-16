@@ -35,16 +35,14 @@ interface
         procedure OnMouseUp(pX, pY: Integer; Button: TGUIMouseButton); override;
         procedure RenderText; override;
       public
-        ///Name
+        [TXMLSerial] property Rect;
         [TXMLSerial] property Caption: String  read FCaption write SetCaption;
         [TXMLSerial] property Flat   : Boolean read FFlat    write SetFlat;
-        [TXMLSerial] property Rect;
         [TXMLSerial] property Color;
-        [TXMLSerial] property Font;
         [TXMLSerial] property Hide;
-        [TXMLSerial] property TextureName;
-        //классы
         [TXMLSerial] property PopupMenu;
+        //
+        [TXMLSerial] property Font;
         [TXMLSerial] property Hint;
         [TXMLSerial] property Blend;
    end;

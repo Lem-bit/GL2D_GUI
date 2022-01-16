@@ -6,22 +6,22 @@ uses Windows, JPEG, SysUtils, Classes, Graphics, Vcl.Imaging.pngimage, dlGUIType
 
 type
   TGAHeader = packed record   // Header type for TGA images
-    FileType     : Byte;
-    ColorMapType : Byte;
-    ImageType    : Byte;
-    ColorMapSpec : Array[0..4] of Byte;
-    OrigX  : Array [0..1] of Byte;
-    OrigY  : Array [0..1] of Byte;
-    Width  : Array [0..1] of Byte;
-    Height : Array [0..1] of Byte;
-    BPP    : Byte;
-    ImageInfo : Byte;
+    FileType    : Byte;
+    ColorMapType: Byte;
+    ImageType   : Byte;
+    ColorMapSpec: array[0..4] of Byte;
+    OrigX       : array[0..1] of Byte;
+    OrigY       : array[0..1] of Byte;
+    Width       : array[0..1] of Byte;
+    Height      : array[0..1] of Byte;
+    BPP         : Byte;
+    ImageInfo   : Byte;
   end;
 
   //
   TTextureConst = record
-    Index: TUInt;  //OPENGL имя
-    Name : String; //XML имя
+    Index: Cardinal; //OPENGL имя
+    Name : String;   //XML имя
   end;
 
 type
@@ -37,7 +37,7 @@ type
     public
       Width : Integer;
       Height: Integer;
-      Link  : TUInt;
+      Link  : Cardinal;
       Load  : Boolean;
     public
       procedure Free;
@@ -54,14 +54,14 @@ type
     private
       FTConverter      : TTextureConverter; //Конвертер
 
-      FTFormat         : TUInt;    //Формат текстуры
-      FTEnvMode        : TUInt;    //Режим отображения текстуры
-      FTFilter         : TUInt;    //Фильтр текстуры
+      FTFormat         : Cardinal; //Формат текстуры
+      FTEnvMode        : Cardinal; //Режим отображения текстуры
+      FTFilter         : Cardinal; //Фильтр текстуры
 
       FErrors          : TTextureError; //Ошибки загрузки
       FLoadFromResource: Boolean; //Загрузка с ресурсов
     private
-      function CreateTexture(const AWidth, AHeight: Integer; const AData: Pointer): TUInt;
+      function CreateTexture(const AWidth, AHeight: Integer; const AData: Pointer): Cardinal;
 
       procedure LoadPNG8to24bit(var png: TPngImage);
       function LoadPNGFromRes(const AName: String; out AInfoHeader: BITMAPINFOHEADER): Pointer;
@@ -88,7 +88,7 @@ type
       destructor Destroy; override;
     public
       //Установить параметры загружаемой текстуры
-      procedure SetTextureOptions(const AFormat: TUInt; const AEnvMode: TUInt; const AFilter: TUInt;
+      procedure SetTextureOptions(const AFormat: Cardinal; const AEnvMode: Cardinal; const AFilter: Cardinal;
          const ABMPConv: Boolean = false; const ABMPConvAlpha: TColor = clBlack);
 
       function LoadFromFile(const AFileName: String; var ATextureLink: TTextureLink): Boolean;
@@ -102,26 +102,18 @@ implementation
 { TTextureLoader }
 
 function TTextureLoader.CaseFileType(const AFileName: String): TTextureFileType;
-var i, num: integer;
-    buf   : string;
+var ext: string;
 begin
   Result:= F_UNKNOWN;
 
-  for i := Length(AFileName) downto 1 do
-    if AFileName[i] = '.' then
-    begin
-      num:= Length(AFileName) - i;
-      Buf:= AnsiLowerCase(Copy(AFileName, Length(AFileName) - num, num + 1));
-      Break;
-    end;
-
-  if SameText(Buf, '.bmp') then
+  Ext:= ExtractFileExt(AFileName);
+  if SameText(Ext, '.bmp') then
     Result:= F_BMP
-  else if SameText(Buf, '.jpg') or SameText(Buf, '.jpeg') then
+  else if SameText(Ext, '.jpg') or SameText(Ext, '.jpeg') then
     Result:= F_JPG
-  else if SameText(Buf, '.tga') then
+  else if SameText(Ext, '.tga') then
     Result:= F_TGA
-  else if SameText(Buf, '.png') then
+  else if SameText(Ext, '.png') then
     Result:= F_PNG;
 end;
 
@@ -135,8 +127,8 @@ begin
   FLoadFromResource     := False;
 end;
 
-function TTextureLoader.CreateTexture(const AWidth, AHeight: Integer; const AData: Pointer): TUInt;
-var Texture: TUInt;
+function TTextureLoader.CreateTexture(const AWidth, AHeight: Integer; const AData: Pointer): Cardinal;
+var Texture: Cardinal;
 begin
   Result:= FREE_LINK;
   try
@@ -151,6 +143,8 @@ begin
          begin
            glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
            glTexImage2D(GL_TEXTURE_2D, 0, FTFormat, AWidth, AHeight, 0, FTFormat, GL_UNSIGNED_BYTE, AData);
+           glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, FTFilter);
+           glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, FTFilter);
          end;
 
        GL_NEAREST_MIPMAP_NEAREST,
@@ -159,13 +153,14 @@ begin
        GL_LINEAR_MIPMAP_LINEAR  :
          begin
            gluBuild2DMipmaps(GL_TEXTURE_2D, 4, AWidth, AHeight, FTFormat, GL_UNSIGNED_BYTE, AData);
+           glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, FTFilter);
          end;
      end;
-
+{
      glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, FTFilter);
      //Nearest or Linear
      glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, FTFilter);
-
+}
      Result:= Texture;
   except
     on e: Exception do
@@ -952,7 +947,7 @@ begin
 
 end;
 
-procedure TTextureLoader.SetTextureOptions(const AFormat, AEnvMode, AFilter: TUInt;
+procedure TTextureLoader.SetTextureOptions(const AFormat, AEnvMode, AFilter: Cardinal;
    const ABMPConv: Boolean = false; const ABMPConvAlpha: TColor = clBlack);
 begin
   FTConverter.Enable:= ABMPConv;

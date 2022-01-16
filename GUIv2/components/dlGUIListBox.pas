@@ -114,6 +114,8 @@ type
     property Selected: Integer     read FSelected;
     property Items[index: integer]: TGUIListBoxItem read GetItem;
   public
+    [TXMLSerial] property Font;
+    [TXMLSerial] property Rect;
     [TXMLSerial] property BrushColor: TColor    read FBrushColor    write FBrushColor;
     [TXMLSerial] property LineSpacing: Integer  read FLineSpacing   write SetLineSpacing;
   end;

@@ -4,10 +4,19 @@ interface
 
 uses SysUtils, Classes, TypInfo, XMLIntf, XMLDoc, ComObj, RTTI;
 
+const XMLIdent    = 'GUIXMLSerial';
+      XMLObjProc  = 'TGUIProc';
+      XMLObjItems = 'Items';
+      XMLMethods  = 'Methods';
+
+
 type
   TXMLSerial = class(TCustomAttribute)
 
   end;
+
+  //Вызывается каждый раз при создании объекта XMLPropToObject
+  TGUIXMLOutObject = reference to procedure(AObject: TObject; AParent: TObject);
 
   TGUIXMLSerial = class
     strict private
@@ -16,18 +25,22 @@ type
       class procedure ObjectPropToXML(AContext: TRttiContext; ANode: IXMLNode; AObject: TObject);
       class procedure ObjectFieldsToXML(AContext: TRttiContext; ANode: IXMLNode; AObject: TObject);
 
-      //class procedure XMLToObject(ANode: IXMLNode; var AObject: TObject);
+      class procedure SetObjectProps(const AContext: TRttiContext; AItemType: TRttiType; AObject: TObject; ANode: IXMLNode);
+      class procedure XMLPropToObject(const AContext: TRttiContext; ANode: IXMLNode; const AParent: TObject; const AProc: TGUIXMLOutObject);
+      class function XMLMakeObject(const AContext: TRttiContext; AParent: TObject; ANode: IXMLNode): TObject;
+      class function XMLToObject(ANode: IXMLNode; const AProc: TGUIXMLOutObject): Boolean;
     public
       //Сохранить данные String в XML
-      class function SaveToXML(AData: String; AFileName: String): Boolean;
-      class function LoadFromXML(AFileName: String): String;
+      class function SaveToXML(const AFileName: String; AData: String): Boolean;
+      class function LoadFromXML(const AFileName: String; const AProc: TGUIXMLOutObject): Boolean;
+
       //Конвертировать класс в XML -> String
       class function GUIObjectToXML(AObject: TObject): String;
-      //Конвертировать строку в XML -> Object
-      //class function XMLToGUIObject(AData: String; var AObject: TObject): Boolean;
   end;
 
 implementation
+
+uses dlGUIForm;
 
 { TGUIXMLSerial }
 
@@ -41,7 +54,7 @@ begin
 
   try
     XMLDoc:= NewXMLDocument();
-    XMLDoc.AddChild('GUIXMLSerial');
+    XMLDoc.AddChild(XMLIdent);
     ObjectToXML(XMLDoc.DocumentElement, AObject);
 
     Result:= XMLDoc.DocumentElement.XML;
@@ -50,17 +63,16 @@ begin
   end;
 end;
 
-class function TGUIXMLSerial.LoadFromXML(AFileName: String): String;
+class function TGUIXMLSerial.LoadFromXML(const AFileName: String; const AProc: TGUIXMLOutObject): Boolean;
 var XMLDoc: IXMLDocument;
 begin
-  Result:= '';
-
+  Result:= False;
   if not FileExists(AFileName) then
     Exit;
 
   try
     XMLDoc:= LoadXMLDocument(AFileName);
-    Result:= XMLDoc.DocumentElement.XML;
+    Result:= XMLToObject(XMLDoc.ChildNodes.FindNode(XMLIdent), AProc);
   except
 
   end;
@@ -114,13 +126,13 @@ begin
 
           tkClass :
           begin
-            if Field.FieldType.Name = TList.ClassName then
+            if SameText(Field.FieldType.Name, TList.ClassName) then
             begin
               BufList:= TList(Field.GetValue(AObject).AsObject);
               if not Assigned(BufList) then
                 Continue;
 
-              NodeList:= ANode.AddChild('Items');
+              NodeList:= ANode.AddChild(XMLObjItems);
               for i := 0 to BufList.Count - 1 do
                 ObjectToXML(NodeList, TObject(BufList[i]));
 
@@ -151,7 +163,7 @@ begin
         if Field.FieldType.Handle^.Kind <> tkMethod then
           Continue;
 
-        if not SameText(String(Field.FieldType.Handle^.Name), 'TGUIProc') then
+        if not SameText(String(Field.FieldType.Handle^.Name), XMLObjProc) then
           Continue;
 
         Value:= Field.GetValue(AObject);
@@ -169,12 +181,12 @@ begin
           if MethodItem.CodeAddress = Method.Code then
           begin
             if not Assigned(Node) then
-              Node:= ANode.AddChild('Methods');
+              Node:= ANode.AddChild(XMLMethods);
 
             xmlName := Field.Name;
             xmlValue:= MethodItem.Name;
 
-            Node.AddChild('Method').Attributes[xmlName]:= xmlValue;
+            Node.AddChild(XMLMethods).Attributes[xmlName]:= xmlValue;
             Break;
           end;
       end;
@@ -219,17 +231,22 @@ begin
           tkInteger    ,
           tkEnumeration,
           tkFloat      ,
+          tkChar       ,
+          tkString     ,
+          tkWChar      ,
+          tkLString    ,
+          tkWString    ,
           tkUString    : ANode.Attributes[xmlName]:= xmlValue;
 
           tkClass :
           begin
-            if Prop.PropertyType.Name = TList.ClassName then
+            if SameText(Prop.PropertyType.Name, TList.ClassName) then
             begin
               BufList:= TList(Prop.GetValue(AObject).AsObject);
               if not Assigned(BufList) then
                 Continue;
 
-              NodeList:= ANode.AddChild('Items');
+              NodeList:= ANode.AddChild(XMLObjItems);
               for i := 0 to BufList.Count - 1 do
                 ObjectToXML(NodeList, TObject(BufList[i]));
 
@@ -253,13 +270,8 @@ begin
           end;
 
           tkUnknown    :;
-          tkChar       :;
-          tkString     :;
           tkSet        :;
           tkMethod     :;
-          tkWChar      :;
-          tkLString    :;
-          tkWString    :;
           tkVariant    :;
           tkArray      :;
           tkInterface  :;
@@ -300,7 +312,7 @@ begin
   end;
 end;
 
-class function TGUIXMLSerial.SaveToXML(AData, AFileName: String): boolean;
+class function TGUIXMLSerial.SaveToXML(const AFileName: String; AData: String): boolean;
 var XMLDoc: IXMLDocument;
 begin
   Result:= False;
@@ -316,42 +328,158 @@ begin
     //без обработки
   end;
 end;
-{
-class function TGUIXMLSerial.XMLToGUIObject(AData: String; var AObject: TObject): Boolean;
-var XMLDoc: IXMLDocument;
+
+class procedure TGUIXMLSerial.SetObjectProps(const AContext: TRttiContext; AItemType: TRttiType; AObject: TObject; ANode: IXMLNode);
+var Prop    : TRttiProperty;
+    ObjValue: TValue;
+    Value   : Variant;
+    Buf     : String;
 begin
-
   try
-    XMLDoc:= LoadXMLData(AData);
-    XMLToObject(XMLDoc.ChildNodes.FindNode('GUIXMLSerial'), AObject);
+    //Присваиваем значения свойствам объекта
+    for Prop in AItemType.GetProperties do
+    begin
+      if not ANode.HasAttribute(Prop.Name) then
+        Continue;
 
-    Result:= True;
+      if not Prop.IsWritable then
+        Continue;
+
+      Buf  := ANode.Attributes[Prop.Name];
+      Value:= ANode.Attributes[Prop.Name];
+
+      case Prop.PropertyType.TypeKind of
+          //tkClass      :;
+          //tkRecord     :;
+          //tkUnknown    :;
+
+          tkInteger    : TValue.Make<Integer>(Value, ObjValue);
+          tkInt64      : TValue.Make<Int64>(Value, ObjValue);
+          tkEnumeration: begin
+                           ObjValue:= TValue.FromOrdinal(
+                             Prop.PropertyType.Handle,
+                             GetEnumValue(Prop.PropertyType.Handle, Buf)
+                           );
+                         end;
+          tkFloat      : TValue.Make<Double>(Value, ObjValue);
+          tkChar, tkUString, tkString, tkWChar, tkLString,
+          tkWString    : TValue.Make<String>(Value, ObjValue);
+          //tkSet        :;
+          //tkMethod     :;
+          //tkVariant    :;
+          //tkArray      :;
+          //tkInterface  :;
+          //tkDynArray   :;
+          //tkClassRef   :;
+          //tkPointer    :;
+          //tkProcedure  :;
+          //tkMRecord    :;
+      end;
+
+      Prop.SetValue(AObject, ObjValue);
+    end;
   finally
 
   end;
 end;
 
-class procedure TGUIXMLSerial.XMLToObject(ANode: IXMLNode; var AObject: TObject);
+class function TGUIXMLSerial.XMLToObject(ANode: IXMLNode; const AProc: TGUIXMLOutObject): Boolean;
 var Context : TRttiContext;
-    ItemType: TRttiType;
-    Instance: TRttiInstanceType;
 begin
+  Result:= False;
   if not Assigned(ANode) then
     Exit;
 
   Context:= TRttiContext.Create;
-
   try
-    ItemType:= Context.FindType('dlGUILabel.TGUILabel');
-    if ItemType <> nil then
-    begin
-      Instance:= ItemType.AsInstance;
-      AObject:= Instance.GetMethod('Create').Invoke(Instance.MetaclassType, [nil, nil]).AsObject;
-    end;
-
+    //Parent = nil
+    XMLPropToObject(Context, ANode, nil, AProc);
+    Result:= True;
   finally
     Context.Free;
   end;
-end;  }
+
+end;
+
+class function TGUIXMLSerial.XMLMakeObject(const AContext: TRttiContext; AParent: TObject; ANode: IXMLNode): TObject;
+const ATTR_NAME   = 'Name';
+      METH_CREATE = 'Create';
+
+var ItemType: TRttiType;
+    Instance: TRttiInstanceType;
+    ObjValue: TValue;
+    Params  : array of TValue;
+begin
+  Result:= nil;
+  if not Assigned(ANode) then
+    Exit;
+
+  try
+    ItemType:= AContext.FindType(ANode.NodeName);
+    //Не нашли подходящий тип (класс)
+    if not Assigned(ItemType) then
+      Exit;
+
+    Instance:= ItemType.AsInstance;
+    if not Assigned(Instance) then
+      Exit;
+
+    Params:= nil;
+    //Создаем объект конструктором Create
+    if ANode.HasAttribute(ATTR_NAME) then
+    begin
+      TValue.Make<String>(ANode.Attributes[ATTR_NAME], ObjValue);
+      Result:= Instance.GetMethod(METH_CREATE).Invoke(Instance.MetaclassType, [ObjValue, nil]).AsObject;
+    end
+    else
+    begin
+      SetLength(Params, Length(Instance.GetMethod(METH_CREATE).GetParameters));
+      Result:= Instance.GetMethod(METH_CREATE).Invoke(Instance.MetaclassType, Params).AsObject;
+    end;
+
+    SetObjectProps(AContext, ItemType, Result, ANode);
+
+  finally
+
+  end;
+end;
+
+class procedure TGUIXMLSerial.XMLPropToObject(const AContext: TRttiContext; ANode: IXMLNode; const AParent: TObject; const AProc: TGUIXMLOutObject);
+var i: integer;
+    Obj: TObject;
+    err: string;
+    errNode: IXMLNode;
+begin
+  try
+    Obj:= nil;
+
+    //Пропускаем ноду с названием Items
+    if not SameText(XMLObjItems, ANode.NodeName) then
+    begin
+      Obj:= XMLMakeObject(AContext, AParent, ANode);
+
+      if Assigned(AProc) then
+        AProc(Obj, AParent);
+    end;
+
+    if SameText(XMLMethods, ANode.NodeName) then
+    begin
+      //Чтение методов
+      for i := 0 to ANode.ChildNodes.Count - 1 do
+        //Пока что не понятно как читать
+      Exit;
+    end
+    else
+      for i := 0 to ANode.ChildNodes.Count - 1 do
+        XMLPropToObject(AContext, ANode.ChildNodes.Nodes[i], Obj, AProc);
+  except
+    on e: exception do
+    begin
+      err:= e.Message;
+      errNode:= ANode;
+    end;
+  end;
+
+end;
 
 end.

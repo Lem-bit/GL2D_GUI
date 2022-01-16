@@ -21,7 +21,7 @@ type
     strict private
       const MOUSE_SIZE = 18;
     public
-      constructor Create(pScale: TFloat; pColor: TColor; pTextureLink: TTextureLink);
+      constructor Create(pScale: Single; pColor: TColor; pTextureLink: TTextureLink);
       procedure OnMouseMove(pX, pY: Integer); override;
       procedure Render; override;
   end;
@@ -31,7 +31,7 @@ implementation
 { TGUIMouse }
 
 
-constructor TGUIMouse.Create(pScale: TFloat; pColor: TColor; pTextureLink: TTextureLink);
+constructor TGUIMouse.Create(pScale: Single; pColor: TColor; pTextureLink: TTextureLink);
 begin
   inherited Create('', gtcObject);
 

@@ -36,6 +36,7 @@ type
     public
       constructor Create(pName: String = ''; pTextureLink: TTextureLink = nil);
     public
+     [TXMLSerial] property Rect;
      [TXMLSerial] property Shape: TGUIBevelShape read FShape write SetShape;
   end;
 
